@@ -1,1 +1,4 @@
 test-files
+config.ini
+.venv
+.python-version
