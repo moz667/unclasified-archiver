@@ -3,9 +3,11 @@
 
 import datetime, hashlib, os, shutil
 
+import exifread
 from exif import Image
 import ffmpeg
 from pymediainfo import MediaInfo
+import whatimage
 
 class SyncArchFile:
     TYPE_IMAGE = 'Image'
@@ -85,13 +87,28 @@ class SyncArchFile:
                         )
                         break
         elif self.get_file_type() == self.TYPE_IMAGE:
-            with open(self.file, 'rb') as image_file:
-                exif_image = Image(image_file)
-            
-            if exif_image.has_exif:
-                self.meta_datec = datetime.datetime.strptime(
-                    exif_image.datetime, '%Y:%m:%d %H:%M:%S'
-                )
+            try:
+                f = open(self.file, 'rb')
+                
+                fmt = whatimage.identify_image(f.read())
+                
+                str_datetime = None
+
+                if fmt == 'heic':
+                    tags = exifread.process_file(f)
+                    str_datetime = tags['EXIF DateTimeOriginal'].__str__()
+                else:
+                    exif_image = Image(f)
+                    
+                    if exif_image.has_exif:
+                        str_datetime = exif_image.datetime
+                
+                if not str_datetime is None:
+                    self.meta_datec = datetime.datetime.strptime(
+                        str_datetime, '%Y:%m:%d %H:%M:%S'
+                    )
+            except:
+                pass
 
     def get_file_datec(self):
         if self.file_datec is None:
@@ -190,3 +207,18 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
                 return False
 
     return True
+
+
+"""
+f = open("test-files/syncthing/user2/.stversions/IMG_5251.HEIC", 'rb')
+tags = exifread.process_file(f)
+tags['EXIF DateTimeOriginal'].__str__()
+
+import whatimage
+
+with open('image.jpg', 'rb') as f:
+    data = f.read()
+fmt = whatimage.identify_image(data)
+print(fmt)
+
+"""
