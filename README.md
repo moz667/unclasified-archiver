@@ -3,9 +3,13 @@
 Archivador de imagenes almacenadas en las carpetas de stdversions de synchthing
 
 ## Enlaces
-* https://docs.python.org/es/3/library/getopt.html
 * https://docs.python.org/3/library/configparser.html
-* https://pypi.org/project/pillow/
+* https://docs.python.org/es/3/library/getopt.html
+* https://docs.python.org/3/library/hashlib.html
+* https://exif.readthedocs.io/en/latest/usage.html
+* https://github.com/kkroening/ffmpeg-python
+* https://github.com/ahupp/python-magic
+* https://github.com/sbraz/pymediainfo
 
 ## Environment (con pyenv)
 
@@ -16,10 +20,22 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
+## Estructura de directorios en el archivo
+
+Si tiene fecha del meta o del nombre del archivo:
+
+* Carpeta con el año
+    * Carpeta con el mes
+
+Si no tiene alguna de las fechas anteriores
+
+* Carpeta `unclassified`
+    * Carpeta con el año de creacion del archivo
+        * Carpeta con el mes de creacion del archivo
+
 ## TODO
 * [ ] Configuracion
 * [ ] Archivos .trash (verificar por si se borro antes de sincronizar)
-* [ ] Sqlite con info? Lo mismo puede ser interesante almacenar de alguna forma los sha1 de los archivos para validar duplicados o borrados (.trash)
 * [ ] Documentar como sincronizar
     * [ ] Android
     * [ ] IOS
