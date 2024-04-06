@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import datetime
-import hashlib
-import os
+import datetime, hashlib, os, shutil
 
 from exif import Image
 import ffmpeg
@@ -26,8 +24,11 @@ class SyncArchFile:
         self.file_datec = None
         self.filename_datec = None
 
-    def calculate_filename(self):
-        pass
+    def get_file(self):
+        return self.file
+    
+    def get_filename(self):
+        return self.filename
 
     def get_file_type(self):
         if self.file_type is None:
@@ -60,7 +61,7 @@ class SyncArchFile:
         return self.sha1
 
     def calculate_sha1(self):
-        openedFile = open(self.file)
+        openedFile = open(self.file, 'rb')
         readFile = openedFile.read()
         self.sha1 = hashlib.sha1(readFile).hexdigest()
     
@@ -72,14 +73,14 @@ class SyncArchFile:
 
     def calculate_meta_datec(self):
         self.meta_datec = None
-        
+
         if self.get_file_type() in [self.TYPE_VIDEO, self.TYPE_AUDIO]:
             vid_probe = ffmpeg.probe(self.file)
 
             if "streams" in vid_probe:
                 for track in vid_probe['streams']:
                     if 'tags' in track and 'creation_time' in track['tags']:
-                        self.meta_datec = datetime.strptime(
+                        self.meta_datec = datetime.datetime.strptime(
                             track['tags']['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ'
                         )
                         break
@@ -88,7 +89,7 @@ class SyncArchFile:
                 exif_image = Image(image_file)
             
             if exif_image.has_exif:
-                self.meta_datec = datetime.strptime(
+                self.meta_datec = datetime.datetime.strptime(
                     exif_image.datetime, '%Y:%m:%d %H:%M:%S'
                 )
 
@@ -116,7 +117,7 @@ class SyncArchFile:
 
         try:
             # format: IMG20231229232507
-            self.filename_datec = datetime.strptime(
+            self.filename_datec = datetime.datetime.strptime(
                 self.filename, '%%%%Y%m%d%H%M%S' + (
                     # 3, IMG|VID
                     # 14, 20231229232507
@@ -129,7 +130,7 @@ class SyncArchFile:
         if self.filename_datec is None:
             try:
                 # format: IMG_20231229_232507
-                self.filename_datec = datetime.strptime(
+                self.filename_datec = datetime.datetime.strptime(
                     self.filename, '%%%%%Y%m%d%%H%M%S' + (
                         # 3, IMG|VID
                         # 2, _
@@ -139,3 +140,53 @@ class SyncArchFile:
                 )
             except:
                 pass
+
+def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files=True, dry_run=False):
+    def create_dir_if_not_exists(path):
+        if not os.path.exists(path):
+            if dry_run:
+                print('>>> os.mkdir(%s)' % path)
+            else:
+                os.mkdir(path)
+
+    create_dir_if_not_exists(archive_target_folder)
+
+    archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%Y'))
+    create_dir_if_not_exists(archive_target_folder)
+
+    archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%m'))
+    create_dir_if_not_exists(archive_target_folder)
+
+    archive_target_file = os.path.join(archive_target_folder, sync_arch_file.get_filename())
+
+    # * Si no existe un archivo en el directorio objetivo
+    #    * Lo archivamos (moviendo o copiando segun el valor de move_files)
+    if not os.path.exists(archive_target_file):
+        if move_files:
+            if dry_run:
+                print('>>> shutil.move(%s, %s)' % (sync_arch_file.get_file(), archive_target_folder))
+            else:
+                shutil.move(sync_arch_file.get_file(), archive_target_folder)
+        else:
+            if dry_run:
+                print('>>> shutil.copy(%s, %s)' % (sync_arch_file.get_file(), archive_target_folder))
+            else:
+                shutil.copy(sync_arch_file.get_file(), archive_target_folder)
+    else:
+        # * Si existe un archivo en el directorio objetivo con el mismo nombre
+        # * Notificaremos el suceso
+        print("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
+
+        # * Si el sha1 de ambos archivos son identicos y si move_files=True borraremos el original
+        if move_files:
+            target_sync_arch_file = SyncArchFile(archive_target_file)
+            if target_sync_arch_file.get_sha1() == sync_arch_file.get_sha1():
+                if dry_run:
+                    print('>>> os.remove(%s)' % sync_arch_file.get_file())
+                else:
+                    os.remove(sync_arch_file.get_file())
+            else:
+                print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent sha1 hash." % (sync_arch_file.get_file(), archive_target_file))
+                return False
+
+    return True
