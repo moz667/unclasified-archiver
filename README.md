@@ -10,6 +10,8 @@ Archivador de imagenes almacenadas en las carpetas de stdversions de synchthing
 * https://github.com/kkroening/ffmpeg-python
 * https://github.com/ahupp/python-magic
 * https://github.com/sbraz/pymediainfo
+* https://github.com/carsales/pyheif
+
 
 ## Environment (con pyenv)
 
