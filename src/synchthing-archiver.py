@@ -72,6 +72,13 @@ def archive_all(source_folder, target_folder, move_files=True):
         if verbose:
             print("     + source: %s" % dirpath)
         
+        for dir in dirs:
+            archive_all(
+                source_folder=dir, 
+                target_folder=target_folder, 
+                move_files=move_files
+            )
+
         for file in files:
             if verbose:
                 print("       * file: %s" % file)
