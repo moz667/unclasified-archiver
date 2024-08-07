@@ -74,7 +74,7 @@ def archive_all(source_folder, target_folder, move_files=True):
         
         for dir in dirs:
             archive_all(
-                source_folder=dir, 
+                source_folder=os.path.join(dirpath, dir), 
                 target_folder=target_folder, 
                 move_files=move_files
             )
