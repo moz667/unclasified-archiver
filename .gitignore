@@ -1,5 +1,5 @@
 test-files
-config.ini
+config*.ini
 .venv
 .python-version
 *.pyc

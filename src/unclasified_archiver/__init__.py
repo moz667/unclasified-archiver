@@ -208,17 +208,58 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
 
     return True
 
+def archive_all(source_folder, target_folder, move_files=True, dry_run=True):
+    if not os.path.exists(source_folder):
+        print("ERROR: Directory '%s' not exists" % [source_folder])
+        return False
+    
+    if not os.path.exists(target_folder):
+        print("ERROR: Directory '%s' not exists" % [target_folder])
+        return False
 
-"""
-f = open("test-files/syncthing/user2/.stversions/IMG_5251.HEIC", 'rb')
-tags = exifread.process_file(f)
-tags['EXIF DateTimeOriginal'].__str__()
+    for dirpath, dirs, files in os.walk(source_folder):
+        trace_verbose("     + source: %s" % dirpath)
+        
+        for dir in dirs:
+            archive_all(
+                source_folder=os.path.join(dirpath, dir), 
+                target_folder=target_folder, 
+                move_files=move_files
+            )
 
-import whatimage
+        for file in files:
+            trace_verbose("       * file: %s" % file)
+            
+            sync_arch_file = SyncArchFile(file=os.path.join(dirpath, file))
 
-with open('image.jpg', 'rb') as f:
-    data = f.read()
-fmt = whatimage.identify_image(data)
-print(fmt)
+            archive_target_folder = target_folder
+            archive_date = sync_arch_file.get_meta_datec()
 
-"""
+            if not archive_date is None:
+                trace_verbose("         - exif date: %s" % archive_date)
+
+            if archive_date is None:
+                archive_date = sync_arch_file.get_filename_datec()
+                if not archive_date is None:
+                    trace_verbose("         - filename date: %s" % archive_date)
+            
+
+            if archive_date is None:
+                archive_date = sync_arch_file.get_file_datec()
+                archive_target_folder = os.path.join(target_folder, 'unclasified')
+
+                if not archive_date is None:
+                    trace_verbose("         - `unclasified` file creation date: %s" % archive_date)
+            
+            if not archive_file(
+                sync_arch_file=sync_arch_file, 
+                archive_target_folder=archive_target_folder, 
+                archive_date=archive_date,
+                move_files=move_files,
+                dry_run=dry_run
+            ):
+                return False
+
+def trace_verbose(text):
+    if __debug__:
+        print(text)
