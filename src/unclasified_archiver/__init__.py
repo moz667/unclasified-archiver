@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import datetime, hashlib, os, shutil
+import datetime, os, shutil
 
 import exifread
 from exif import Image
 import ffmpeg
 from pymediainfo import MediaInfo
 import whatimage
+
+from simple_file_checksum import get_checksum
 
 class SyncArchFile:
     TYPE_IMAGE = 'Image'
@@ -56,16 +58,8 @@ class SyncArchFile:
         if self.file_type is None:
             self.file_type = self.TYPE_OTHER
 
-    def get_sha1(self):
-        if self.sha1 is None:
-            self.calculate_sha1()
-
-        return self.sha1
-
-    def calculate_sha1(self):
-        openedFile = open(self.file, 'rb')
-        readFile = openedFile.read()
-        self.sha1 = hashlib.sha1(readFile).hexdigest()
+    def get_checksum(self):
+        self.sha1 = get_checksum(self.file)
     
     def get_meta_datec(self):
         if self.meta_datec is None:
@@ -197,13 +191,13 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
         # * Si el sha1 de ambos archivos son identicos y si move_files=True borraremos el original
         if move_files:
             target_sync_arch_file = SyncArchFile(archive_target_file)
-            if target_sync_arch_file.get_sha1() == sync_arch_file.get_sha1():
+            if target_sync_arch_file.get_checksum() == sync_arch_file.get_checksum():
                 if dry_run:
                     print('>>> os.remove(%s)' % sync_arch_file.get_file())
                 else:
                     os.remove(sync_arch_file.get_file())
             else:
-                print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent sha1 hash." % (sync_arch_file.get_file(), archive_target_file))
+                print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (sync_arch_file.get_file(), archive_target_file))
                 return False
 
     return True
