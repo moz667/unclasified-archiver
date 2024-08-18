@@ -116,41 +116,76 @@ class SyncArchFile:
         )
 
     def get_filename_datec(self):
-        if self.filename_datec is None:
+        if not self.filename_datec:
             self.calculate_filename_datec()
+            if not self.filename_datec:
+                trace_verbose(
+                    "Can't calculate date by filename on file '%s'." % 
+                    self.filename
+                )
         
         return self.filename_datec
 
     def calculate_filename_datec(self):
         self.filename_datec = None
 
-        filename_len = len(self.filename)
+        # format: IMG20231229232507
+        # 3, IMG|VID
+        # 14, 20231229232507
+        self.filename_datec = self.format_str_as_date(
+            self.filename[3:17], '%Y%m%d%H%M%S'
+        )
+        
+        # format: IMG_20231229_232507
+        # 4, IMG_|VID_
+        # 15, 20231229_232507
+        if not self.filename_datec:
+            self.filename_datec = self.format_str_as_date(
+                self.filename[4:19], '%Y%m%d_%H%M%S'
+            )
 
+        # format: 2013-03-17-19-57-16_photo
+        #         2013-03-17-19-57-50_deco
+        # 4, 2013-03-17-19-57-50
+        if not self.filename_datec:
+            self.filename_datec = self.format_str_as_date(
+                self.filename[:19], '%Y-%m-%d-%H-%M-%S'
+            )
+
+        # format: _20140209_174329
+        #         CYMERA_20130615_103530
+        #         image_20161021_165225
+        #         PANO_20130320_160358
+        #         Pixlr_20160411150815984
+        #         pixlr_20171021160935846
+        #         Screenshot_20160629-213115
+        #         TRIM_20131203_183531
+        # X, XXXX
+        # 8, 20231229
+        if not self.filename_datec:
+            date_on_name = self.filename.split('_', 1)
+            self.filename_datec = self.format_str_as_date(
+                date_on_name[:8], '%Y%m%d'
+            )
+        
+        # Others...
+        # IMG-20140320-WA0002.jpg
+        # Screenshot_2015-04-28-07-07-54.png
+        # Screenshot_2015-05-01-07-46-55~2.jpg
+        # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
+
+
+    def format_str_as_date(self, str, format):
         try:
-            # format: IMG20231229232507
-            self.filename_datec = datetime.datetime.strptime(
-                self.filename, '%%%%Y%m%d%H%M%S' + (
-                    # 3, IMG|VID
-                    # 14, 20231229232507
-                    '%' * (filename_len - 3 - 14)
-                )
+            # TODO: minimal year
+            return datetime.datetime.strptime(
+                str, format
             )
         except:
-            pass
+            return None
+
+
         
-        if self.filename_datec is None:
-            try:
-                # format: IMG_20231229_232507
-                self.filename_datec = datetime.datetime.strptime(
-                    self.filename, '%%%%%Y%m%d%%H%M%S' + (
-                        # 3, IMG|VID
-                        # 2, _
-                        # 14, 20231229232507
-                        '%' * (filename_len - 3 - 2 - 14)
-                    )
-                )
-            except:
-                pass
 
 def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files=True, dry_run=False):
     def create_dir_if_not_exists(path):
@@ -229,12 +264,12 @@ def archive_all(source_folder, target_folder, move_files=True, dry_run=True):
             archive_target_folder = target_folder
             archive_date = sync_arch_file.get_meta_datec()
 
-            if not archive_date is None:
+            if archive_date:
                 trace_verbose("         - exif date: %s" % archive_date)
 
             if archive_date is None:
                 archive_date = sync_arch_file.get_filename_datec()
-                if not archive_date is None:
+                if archive_date:
                     trace_verbose("         - filename date: %s" % archive_date)
             
 
@@ -252,7 +287,7 @@ def archive_all(source_folder, target_folder, move_files=True, dry_run=True):
                 move_files=move_files,
                 dry_run=dry_run
             ):
-                return False
+                print("WARNING: Can't archive file '%s'" % file)
 
 def trace_verbose(text):
     if __debug__:
