@@ -45,6 +45,7 @@ def main():
             print('   - unclasified_folder: %s' % unclasified_folder)
             print('   - archive_folder: %s' % archive_folder)
             print('   - move_files: %s' % move_files)
+            print('   - delete_empty_dir: %s' % delete_empty_dir)
         
         # Archivar
         archive_all(
