@@ -138,7 +138,7 @@ class SyncArchFile:
         self.filename_datec = self.format_str_as_date(
             self.filename[3:17], '%Y%m%d%H%M%S'
         )
-        
+
         # format: IMG_20231229_232507
         # 4, IMG_|VID_
         # 15, 20231229_232507
@@ -211,23 +211,21 @@ class SyncArchFile:
             return None
 
 
-        
+def create_dir_if_not_exists(path, dry_run=False):
+    if not os.path.exists(path):
+        if dry_run:
+            print('>>> os.mkdir(%s)' % path)
+        else:
+            os.mkdir(path)
 
 def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files=True, dry_run=False):
-    def create_dir_if_not_exists(path):
-        if not os.path.exists(path):
-            if dry_run:
-                print('>>> os.mkdir(%s)' % path)
-            else:
-                os.mkdir(path)
-
-    create_dir_if_not_exists(archive_target_folder)
+    create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%Y'))
-    create_dir_if_not_exists(archive_target_folder)
+    create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%m'))
-    create_dir_if_not_exists(archive_target_folder)
+    create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_file = os.path.join(archive_target_folder, sync_arch_file.get_filename())
 
@@ -297,7 +295,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
             
             sync_arch_file = SyncArchFile(file=os.path.join(dirpath, file))
 
-            archive_target_folder = target_folder
+            archive_target_folder = os.path.join(target_folder, sync_arch_file.get_file_type().lower())
             archive_date = sync_arch_file.get_meta_datec()
 
             if archive_date:
@@ -311,11 +309,18 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
 
             if archive_date is None:
                 archive_date = sync_arch_file.get_file_datec()
-                archive_target_folder = os.path.join(target_folder, 'unclasified')
+                archive_target_folder = os.path.join(
+                    target_folder, 
+                    'unclasified'
+                )
+
+                create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
+
+                archive_target_folder = os.path.join(archive_target_folder, sync_arch_file.get_file_type().lower())
 
                 if not archive_date is None:
                     trace_verbose("         - `unclasified` file creation date: %s" % archive_date)
-            
+
             if not archive_file(
                 sync_arch_file=sync_arch_file, 
                 archive_target_folder=archive_target_folder, 
