@@ -25,7 +25,7 @@ class SyncArchFile:
         self.filename = os.path.basename(file)
 
         self.file_type = None
-        self.sha1 = None
+        self.checksum = None
 
         self.meta_datec = None
         self.file_datec = None
@@ -62,7 +62,10 @@ class SyncArchFile:
             self.file_type = self.TYPE_OTHER
 
     def get_checksum(self):
-        self.sha1 = get_checksum(self.file)
+        if self.checksum is None:
+            self.checksum = get_checksum(self.file)
+        
+        return self.checksum
     
     def get_meta_datec(self):
         if self.meta_datec is None:
@@ -247,7 +250,7 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
         # * Notificaremos el suceso
         print("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
 
-        # * Si el sha1 de ambos archivos son identicos y si move_files=True borraremos el original
+        # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
         if move_files:
             target_sync_arch_file = SyncArchFile(archive_target_file)
             if target_sync_arch_file.get_checksum() == sync_arch_file.get_checksum():
