@@ -163,14 +163,21 @@ class SyncArchFile:
         #         pixlr_20171021160935846
         #         Screenshot_20160629-213115
         #         TRIM_20131203_183531
+        #         ???-20140320-WA0002.jpg
         # X, XXXX
         # 8, 20231229
         if not self.filename_datec:
-            date_on_name = self.filename.split('_', 1)
-            self.filename_datec = self.format_str_as_date(
-                date_on_name[:8], '%Y%m%d'
-            )
-        
+            for separator in ('_', '-'):
+                date_on_name = self.filename.split(separator, 1)
+                if len(date_on_name) == 2:
+                    date_on_name = date_on_name[1]
+                    self.filename_datec = self.format_str_as_date(
+                        date_on_name[:8], '%Y%m%d'
+                    )
+                
+                if self.filename_datec:
+                    break
+
         # Others...
         # IMG-20140320-WA0002.jpg
         # Screenshot_2015-04-28-07-07-54.png
