@@ -256,7 +256,7 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
 
     return True
 
-def archive_all(source_folder, target_folder, move_files=True, dry_run=True):
+def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, dry_run=True):
     if not os.path.exists(source_folder):
         print("ERROR: Directory '%s' not exists" % [source_folder])
         return False
@@ -269,12 +269,21 @@ def archive_all(source_folder, target_folder, move_files=True, dry_run=True):
         trace_verbose("     + source: %s" % dirpath)
         
         for dir in dirs:
+            cur_source_folder = os.path.join(dirpath, dir)
+            
             archive_all(
-                source_folder=os.path.join(dirpath, dir), 
+                source_folder=cur_source_folder, 
                 target_folder=target_folder, 
                 move_files=move_files,
+                delete_empty_dir=delete_empty_dir,
                 dry_run=dry_run
             )
+
+            if delete_empty_dir and len(os.listdir(cur_source_folder)) == 0:
+                if dry_run:
+                    print(">>> os.rmdir('%s')" % cur_source_folder)
+                else:
+                    os.rmdir(cur_source_folder)
 
         for file in files:
             trace_verbose("       * file: %s" % file)

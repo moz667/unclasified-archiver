@@ -38,6 +38,8 @@ def main():
         unclasified_folder = cfg_section['unclasified_folder']
         archive_folder = cfg_section['archive_folder']
         move_files = True if not 'move_files' in cfg_section or cfg_section['move_files'] != 'false' else False
+        delete_empty_dir = True if not 'delete_empty_dir' in cfg_section or cfg_section['delete_empty_dir'] != 'false' else False
+
         if __debug__:
             print(' * %s' % section_key)
             print('   - unclasified_folder: %s' % unclasified_folder)
@@ -45,7 +47,13 @@ def main():
             print('   - move_files: %s' % move_files)
         
         # Archivar
-        archive_all(source_folder=unclasified_folder, target_folder=archive_folder, move_files=move_files, dry_run=dry_run)
+        archive_all(
+            source_folder=unclasified_folder, 
+            target_folder=archive_folder, 
+            move_files=move_files, 
+            delete_empty_dir=delete_empty_dir,
+            dry_run=dry_run
+        )
 
 def print_help():
     print('unclasified-archiver.py -c <config-file.ini> [--dry_run]')
