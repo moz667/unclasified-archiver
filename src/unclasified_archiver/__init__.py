@@ -167,6 +167,7 @@ class SyncArchFile:
         #         Screenshot_20160629-213115
         #         TRIM_20131203_183531
         #         ???-20140320-WA0002.jpg
+        #         Screenshot_2012-11-26-10-31-14.png
         # X, XXXX
         # 8, 20231229
         if not self.filename_datec:
@@ -177,14 +178,28 @@ class SyncArchFile:
                     self.filename_datec = self.format_str_as_date(
                         date_on_name[:8], '%Y%m%d'
                     )
+
+                    if not self.filename_datec:
+                        self.filename_datec = self.format_str_as_date(
+                            date_on_name[:10], '%Y-%m-%d'
+                        )
                 
                 if self.filename_datec:
                     break
 
+        if not self.filename_datec:
+            # format: 20140104_161338
+            self.filename_datec = self.format_str_as_date(
+                self.filename[:8], '%Y%m%d'
+            )
+
+        if not self.filename_datec:
+            # format: 2012-08-02 08.55.16
+            self.filename_datec = self.format_str_as_date(
+                self.filename[:10], '%Y-%m-%d'
+            )
+
         # Others...
-        # IMG-20140320-WA0002.jpg
-        # Screenshot_2015-04-28-07-07-54.png
-        # Screenshot_2015-05-01-07-46-55~2.jpg
         # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
 
 
