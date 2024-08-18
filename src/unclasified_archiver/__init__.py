@@ -11,6 +11,9 @@ import whatimage
 
 from simple_file_checksum import get_checksum
 
+MINIMAL_DATE = datetime.datetime(2000, 1, 1)
+MAXIMAL_DATE = datetime.datetime.today()
+
 class SyncArchFile:
     TYPE_IMAGE = 'Image'
     TYPE_VIDEO = 'Video'
@@ -176,11 +179,27 @@ class SyncArchFile:
 
 
     def format_str_as_date(self, str, format):
+        global MAXIMAL_DATE, MINIMAL_DATE
+
         try:
             # TODO: minimal year
-            return datetime.datetime.strptime(
+            datetime_return = datetime.datetime.strptime(
                 str, format
             )
+
+            if datetime_return <= MAXIMAL_DATE and datetime_return >= MINIMAL_DATE:
+                return datetime_return
+            else:       
+                trace_verbose(
+                    "Date '%s' extracted from the string '%s' is greater than '%s' or is less than '%s'." % 
+                    (
+                        datetime_return.strftime('%Y%m%d_%H%M%S'), 
+                        str, 
+                        MAXIMAL_DATE.strftime('%Y%m%d_%H%M%S'),
+                        MINIMAL_DATE.strftime('%Y%m%d_%H%M%S'),
+                    )
+                )
+                return None
         except:
             return None
 
@@ -253,7 +272,8 @@ def archive_all(source_folder, target_folder, move_files=True, dry_run=True):
             archive_all(
                 source_folder=os.path.join(dirpath, dir), 
                 target_folder=target_folder, 
-                move_files=move_files
+                move_files=move_files,
+                dry_run=dry_run
             )
 
         for file in files:
