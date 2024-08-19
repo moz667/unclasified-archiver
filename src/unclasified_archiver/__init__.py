@@ -7,7 +7,6 @@ import exifread
 from exif import Image
 import ffmpeg
 from pymediainfo import MediaInfo
-import whatimage
 
 from simple_file_checksum import get_checksum
 
@@ -88,20 +87,17 @@ class SyncArchFile:
                         break
         elif self.get_file_type() == self.TYPE_IMAGE:
             try:
-                f = open(self.file, 'rb')
-                
-                fmt = whatimage.identify_image(f.read())
-                
                 str_datetime = None
-
-                if fmt == 'heic':
-                    tags = exifread.process_file(f)
-                    str_datetime = tags['EXIF DateTimeOriginal'].__str__()
+                f = open(self.file, 'rb')
+                exif_image = Image(f)
+                
+                if exif_image.has_exif:
+                    str_datetime = exif_image.datetime
                 else:
-                    exif_image = Image(f)
-                    
-                    if exif_image.has_exif:
-                        str_datetime = exif_image.datetime
+                    tags = exifread.process_file(f)
+
+                    if 'EXIF DateTimeOriginal' in tags:
+                        str_datetime = tags['EXIF DateTimeOriginal'].__str__()
                 
                 if not str_datetime is None:
                     self.meta_datec = datetime.datetime.strptime(
@@ -218,10 +214,10 @@ class SyncArchFile:
                 trace_verbose(
                     "Date '%s' extracted from the string '%s' is greater than '%s' or is less than '%s'." % 
                     (
-                        datetime_return.strftime('%Y%m%d_%H%M%S'), 
+                        datetime_return.strftime('%Y-%m-%d %H:%M:%S'), 
                         str, 
-                        MAXIMAL_DATE.strftime('%Y%m%d_%H%M%S'),
-                        MINIMAL_DATE.strftime('%Y%m%d_%H%M%S'),
+                        MAXIMAL_DATE.strftime('%Y-%m-%d %H:%M:%S'), 
+                        MINIMAL_DATE.strftime('%Y-%m-%d %H:%M:%S'), 
                     )
                 )
                 return None
