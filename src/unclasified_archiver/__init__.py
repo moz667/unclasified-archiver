@@ -13,7 +13,7 @@ from simple_file_checksum import get_checksum
 MINIMAL_DATE = datetime.datetime(2000, 1, 1)
 MAXIMAL_DATE = datetime.datetime.today()
 
-class SyncArchFile:
+class UncArchFile:
     TYPE_IMAGE = 'Image'
     TYPE_VIDEO = 'Video'
     TYPE_AUDIO = 'Audio'
@@ -203,7 +203,6 @@ class SyncArchFile:
         global MAXIMAL_DATE, MINIMAL_DATE
 
         try:
-            # TODO: minimal year
             datetime_return = datetime.datetime.strptime(
                 str, format
             )
@@ -232,7 +231,7 @@ def create_dir_if_not_exists(path, dry_run=False):
         else:
             os.mkdir(path)
 
-def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files=True, dry_run=False):
+def archive_file(unc_arch_file, archive_target_folder, archive_date, move_files=True, dry_run=False):
     create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%Y'))
@@ -241,21 +240,21 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%m'))
     create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
-    archive_target_file = os.path.join(archive_target_folder, sync_arch_file.get_filename())
+    archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_filename())
 
     # * Si no existe un archivo en el directorio objetivo
     #    * Lo archivamos (moviendo o copiando segun el valor de move_files)
     if not os.path.exists(archive_target_file):
         if move_files:
             if dry_run:
-                print('>>> shutil.move(%s, %s)' % (sync_arch_file.get_file(), archive_target_folder))
+                print('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
             else:
-                shutil.move(sync_arch_file.get_file(), archive_target_folder)
+                shutil.move(unc_arch_file.get_file(), archive_target_folder)
         else:
             if dry_run:
-                print('>>> shutil.copy(%s, %s)' % (sync_arch_file.get_file(), archive_target_folder))
+                print('>>> shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
             else:
-                shutil.copy(sync_arch_file.get_file(), archive_target_folder)
+                shutil.copy(unc_arch_file.get_file(), archive_target_folder)
     else:
         # * Si existe un archivo en el directorio objetivo con el mismo nombre
         # * Notificaremos el suceso
@@ -263,14 +262,14 @@ def archive_file(sync_arch_file, archive_target_folder, archive_date, move_files
 
         # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
         if move_files:
-            target_sync_arch_file = SyncArchFile(archive_target_file)
-            if target_sync_arch_file.get_checksum() == sync_arch_file.get_checksum():
+            target_unc_arch_file = UncArchFile(archive_target_file)
+            if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
                 if dry_run:
-                    print('>>> os.remove(%s)' % sync_arch_file.get_file())
+                    print('>>> os.remove(%s)' % unc_arch_file.get_file())
                 else:
-                    os.remove(sync_arch_file.get_file())
+                    os.remove(unc_arch_file.get_file())
             else:
-                print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (sync_arch_file.get_file(), archive_target_file))
+                print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (unc_arch_file.get_file(), archive_target_file))
                 return False
 
     return True
@@ -307,36 +306,36 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
         for file in files:
             trace_verbose("       * file: %s" % file)
             
-            sync_arch_file = SyncArchFile(file=os.path.join(dirpath, file))
+            unc_arch_file = UncArchFile(file=os.path.join(dirpath, file))
 
-            archive_target_folder = os.path.join(target_folder, sync_arch_file.get_file_type().lower())
-            archive_date = sync_arch_file.get_meta_datec()
+            archive_target_folder = os.path.join(target_folder, unc_arch_file.get_file_type().lower())
+            archive_date = unc_arch_file.get_meta_datec()
 
             if archive_date:
                 trace_verbose("         - exif date: %s" % archive_date)
 
             if archive_date is None:
-                archive_date = sync_arch_file.get_filename_datec()
+                archive_date = unc_arch_file.get_filename_datec()
                 if archive_date:
                     trace_verbose("         - filename date: %s" % archive_date)
             
 
             if archive_date is None:
-                archive_date = sync_arch_file.get_file_datec()
+                archive_date = unc_arch_file.get_file_datec()
                 archive_target_folder = os.path.join(
                     target_folder, 
-                    'unclasified'
+                    'modified-date'
                 )
 
                 create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
-                archive_target_folder = os.path.join(archive_target_folder, sync_arch_file.get_file_type().lower())
+                archive_target_folder = os.path.join(archive_target_folder, unc_arch_file.get_file_type().lower())
 
                 if not archive_date is None:
-                    trace_verbose("         - `unclasified` file creation date: %s" % archive_date)
+                    trace_verbose("         - `modified-date` file modification date: %s" % archive_date)
 
             if not archive_file(
-                sync_arch_file=sync_arch_file, 
+                unc_arch_file=unc_arch_file, 
                 archive_target_folder=archive_target_folder, 
                 archive_date=archive_date,
                 move_files=move_files,

@@ -3,7 +3,7 @@
 
 from unclasified_archiver import archive_all
 
-import getopt, os, sys
+import getopt, sys
 import configparser
 
 def main():
