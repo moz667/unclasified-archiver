@@ -320,6 +320,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
             ):
                 trace_verbose("         - Can't archive file '%s'" % file)
         
+    for dirpath, dirs, files in os.walk(source_folder):
         for dir in dirs:
             cur_source_folder = os.path.join(dirpath, dir)
             
