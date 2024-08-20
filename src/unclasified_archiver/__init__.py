@@ -276,23 +276,6 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
     for dirpath, dirs, files in os.walk(source_folder):
         trace_verbose("     + source: %s" % dirpath)
         
-        for dir in dirs:
-            cur_source_folder = os.path.join(dirpath, dir)
-            
-            archive_all(
-                source_folder=cur_source_folder, 
-                target_folder=target_folder, 
-                move_files=move_files,
-                delete_empty_dir=delete_empty_dir,
-                dry_run=dry_run
-            )
-
-            if delete_empty_dir and len(os.listdir(cur_source_folder)) == 0:
-                if dry_run:
-                    trace_verbose(">>> os.rmdir('%s')" % cur_source_folder)
-                else:
-                    os.rmdir(cur_source_folder)
-
         for file in files:
             trace_verbose("       * file: %s" % file)
             
@@ -336,6 +319,16 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 dry_run=dry_run
             ):
                 trace_verbose("         - Can't archive file '%s'" % file)
+        
+        for dir in dirs:
+            cur_source_folder = os.path.join(dirpath, dir)
+            
+            if delete_empty_dir and len(os.listdir(cur_source_folder)) == 0:
+                if dry_run:
+                    trace_verbose(">>> os.rmdir('%s')" % cur_source_folder)
+                else:
+                    os.rmdir(cur_source_folder)
+
 
 def trace_verbose(text):
     if __debug__:
