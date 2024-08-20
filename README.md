@@ -5,7 +5,6 @@ Archivador de imagenes almacenadas en las carpetas de stdversions de synchthing
 ## Related links
 * https://docs.python.org/3/library/configparser.html
 * https://docs.python.org/es/3/library/getopt.html
-* https://exif.readthedocs.io/en/latest/usage.html
 * https://github.com/kkroening/ffmpeg-python
 * https://github.com/ahupp/python-magic
 * https://github.com/sbraz/pymediainfo

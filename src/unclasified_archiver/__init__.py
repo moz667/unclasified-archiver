@@ -4,7 +4,6 @@
 import datetime, os, shutil
 
 import exifread
-from exif import Image
 import ffmpeg
 from pymediainfo import MediaInfo
 
@@ -89,15 +88,11 @@ class UncArchFile:
             try:
                 str_datetime = None
                 f = open(self.file, 'rb')
-                exif_image = Image(f)
-                
-                if exif_image.has_exif:
-                    str_datetime = exif_image.datetime
-                else:
-                    tags = exifread.process_file(f)
 
-                    if 'EXIF DateTimeOriginal' in tags:
-                        str_datetime = tags['EXIF DateTimeOriginal'].__str__()
+                tags = exifread.process_file(f)
+
+                if 'EXIF DateTimeOriginal' in tags:
+                    str_datetime = tags['EXIF DateTimeOriginal'].__str__()
                 
                 if not str_datetime is None:
                     self.meta_datec = datetime.datetime.strptime(
@@ -120,11 +115,6 @@ class UncArchFile:
     def get_filename_datec(self):
         if not self.filename_datec:
             self.calculate_filename_datec()
-            if not self.filename_datec:
-                trace_verbose(
-                    "Can't calculate date by filename on file '%s'." % 
-                    self.filename
-                )
         
         return self.filename_datec
 
@@ -227,7 +217,7 @@ class UncArchFile:
 def create_dir_if_not_exists(path, dry_run=False):
     if not os.path.exists(path):
         if dry_run:
-            print('>>> os.mkdir(%s)' % path)
+            trace_verbose('>>> os.mkdir(%s)' % path)
         else:
             os.mkdir(path)
 
@@ -247,25 +237,25 @@ def archive_file(unc_arch_file, archive_target_folder, archive_date, move_files=
     if not os.path.exists(archive_target_file):
         if move_files:
             if dry_run:
-                print('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
+                trace_verbose('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
             else:
                 shutil.move(unc_arch_file.get_file(), archive_target_folder)
         else:
             if dry_run:
-                print('>>> shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
+                trace_verbose('>>> shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
             else:
                 shutil.copy(unc_arch_file.get_file(), archive_target_folder)
     else:
         # * Si existe un archivo en el directorio objetivo con el mismo nombre
         # * Notificaremos el suceso
-        print("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
+        trace_verbose("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
 
         # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
         if move_files:
             target_unc_arch_file = UncArchFile(archive_target_file)
             if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
                 if dry_run:
-                    print('>>> os.remove(%s)' % unc_arch_file.get_file())
+                    trace_verbose('>>> os.remove(%s)' % unc_arch_file.get_file())
                 else:
                     os.remove(unc_arch_file.get_file())
             else:
@@ -299,7 +289,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
 
             if delete_empty_dir and len(os.listdir(cur_source_folder)) == 0:
                 if dry_run:
-                    print(">>> os.rmdir('%s')" % cur_source_folder)
+                    trace_verbose(">>> os.rmdir('%s')" % cur_source_folder)
                 else:
                     os.rmdir(cur_source_folder)
 
@@ -308,7 +298,11 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
             
             unc_arch_file = UncArchFile(file=os.path.join(dirpath, file))
 
-            archive_target_folder = os.path.join(target_folder, unc_arch_file.get_file_type().lower())
+            archive_target_folder = target_folder
+
+            if not unc_arch_file.get_file_type() in [UncArchFile.TYPE_IMAGE, UncArchFile.TYPE_VIDEO]:
+                archive_target_folder = os.path.join(target_folder, unc_arch_file.get_file_type().lower())
+            
             archive_date = unc_arch_file.get_meta_datec()
 
             if archive_date:
@@ -341,7 +335,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 move_files=move_files,
                 dry_run=dry_run
             ):
-                print("WARNING: Can't archive file '%s'" % file)
+                trace_verbose("         - Can't archive file '%s'" % file)
 
 def trace_verbose(text):
     if __debug__:
