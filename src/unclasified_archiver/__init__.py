@@ -74,18 +74,18 @@ class UncArchFile:
     def calculate_meta_datec(self):
         self.meta_datec = None
 
-        if self.get_file_type() in [self.TYPE_VIDEO, self.TYPE_AUDIO]:
-            vid_probe = ffmpeg.probe(self.file)
+        try:
+            if self.get_file_type() in [self.TYPE_VIDEO, self.TYPE_AUDIO]:
+                vid_probe = ffmpeg.probe(self.file)
 
-            if "streams" in vid_probe:
-                for track in vid_probe['streams']:
-                    if 'tags' in track and 'creation_time' in track['tags']:
-                        self.meta_datec = datetime.datetime.strptime(
-                            track['tags']['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ'
-                        )
-                        break
-        elif self.get_file_type() == self.TYPE_IMAGE:
-            try:
+                if "streams" in vid_probe:
+                    for track in vid_probe['streams']:
+                        if 'tags' in track and 'creation_time' in track['tags']:
+                            self.meta_datec = datetime.datetime.strptime(
+                                track['tags']['creation_time'], '%Y-%m-%dT%H:%M:%S.%fZ'
+                            )
+                            break
+            elif self.get_file_type() == self.TYPE_IMAGE:
                 str_datetime = None
                 f = open(self.file, 'rb')
 
@@ -98,8 +98,8 @@ class UncArchFile:
                     self.meta_datec = datetime.datetime.strptime(
                         str_datetime, '%Y:%m:%d %H:%M:%S'
                     )
-            except:
-                pass
+        except:
+            trace_verbose("ERROR: On calculate_meta_datec of '%s'." % self.file)
 
     def get_file_datec(self):
         if self.file_datec is None:
@@ -211,6 +211,7 @@ class UncArchFile:
                 )
                 return None
         except:
+            trace_verbose("ERROR: On string '%s' when format as '%s'." % (str, format))
             return None
 
 
