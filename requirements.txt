@@ -1,5 +1,4 @@
 ffmpeg_python==0.2.0
-exif==1.6.0
 pymediainfo==6.1.0
 ExifRead==2.3.2
-whatimage==0.0.3
+simple-file-checksum==1.2.2
