@@ -113,3 +113,5 @@ apt install ffmpeg libmediainfo0v5 openssl
 
 ## TODO
 * [ ] Dockerfile (too many soft reqs.)
+* [ ] `-c` argument is not working
+* [ ] Option to archive only special trashed files (from resilio sync backup option `Store deleted files in folder archive`), e.g.: `.trashed-1727131504-IMG20240824125122.jpg`
