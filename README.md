@@ -92,6 +92,7 @@ python -O unclasified-archiver.py -c /etc/unclasified-archiver/config.ini
 ```
 
 ## Related links
+
 * https://docs.python.org/3/library/configparser.html
 * https://docs.python.org/es/3/library/getopt.html
 * https://github.com/kkroening/ffmpeg-python
@@ -100,18 +101,42 @@ python -O unclasified-archiver.py -c /etc/unclasified-archiver/config.ini
 * https://github.com/carsales/pyheif
 * https://github.com/sashsinha/simple-file-checksum/
 
-## Environment (con pyenv)
+## Entorno con docker
 
 ```bash
-pyenv virtualenv 3.7.2 unclasified-archiver
-echo "unclasified-archiver" > .python-version
-pip install --upgrade pip
-pip install -r requirements.txt
-# Extra libs
+# Construir la imagen en local
+docker build . --tag unclasified-archiver
+
+# Establecer las rutas **absolutas** a las carpetas
+UNCLASIFIED_FOLDER=~/unclasified_folder/
+ARCHIVE_FOLDER=~/archive_folder/
+
+# Ejecucion de prueba
+docker run --rm -v $UNCLASIFIED_FOLDER:/unclasified -v $ARCHIVE_FOLDER:/archive unclasified-archiver
+```
+
+**Hay que tener en cuenta que la configuracion por defecto que lleva la imagen de docker es la definida en [config.sample.ini](./config.sample.ini), que ejecuta python con el argumento `-O` (saca solo el output de problemas que pueda tener)y que se ejecuta con la opcion `--dry-run` (para que no modifique nada y solo muestre lo que va a hacer).**
+
+Una vez que tengamos claro que la ejecucion de prueba es la que buscamos, podremos ejecutar sin el `--dry-run` de la siguiente forma:
+
+```bash
+docker run --rm -v $UNCLASIFIED_FOLDER:/unclasified -v $ARCHIVE_FOLDER:/archive unclasified-archiver python -O ./unclasified-archiver.py
+```
+
+## Entorno local (con pyenv)
+
+```bash
+# Instalar librerias extra (debian, ubuntu...)
 apt install ffmpeg libmediainfo0v5 openssl
+# Construir el entorno con pyenv
+pyenv virtualenv 3.12.5 unclasified-archiver
+echo "unclasified-archiver" > .python-version
+# **opcional** Actualizar pip local
+pip install --upgrade pip
+# Instalar requisitos de python
+pip install -r requirements.txt
 ```
 
 ## TODO
-* [ ] Dockerfile (too many soft reqs.)
 * [ ] `-c` argument is not working
 * [ ] Option to archive only special trashed files (from resilio sync backup option `Store deleted files in folder archive`), e.g.: `.trashed-1727131504-IMG20240824125122.jpg`
