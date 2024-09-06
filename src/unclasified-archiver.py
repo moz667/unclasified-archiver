@@ -4,7 +4,6 @@
 from unclasified_archiver import archive_all
 
 import configparser
-import fileinput
 import getopt
 import io
 import sys
@@ -33,7 +32,7 @@ def main():
             assert False, "unhandled option"
 
     if not config_file and not sys.stdin.isatty():
-        for line in fileinput.input():
+        for line in sys.stdin:
             config_file += line
         
         config_file = io.StringIO(config_file)
@@ -74,7 +73,9 @@ def main():
         )
 
 def print_help():
-    print('unclasified-archiver.py --c=<config-file.ini> [--dry_run]')
+    print('Help:')
+    print('    unclasified-archiver.py [--c=<config-file.ini>] [--dry-run]')
+    print('    unclasified-archiver.py [--config=<config-file.ini>] [--dry-run]')
 
 if __name__ == "__main__":
     main()
