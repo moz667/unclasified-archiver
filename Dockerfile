@@ -12,12 +12,10 @@ WORKDIR /opt/app
 
 COPY src /opt/app
 ADD requirements.txt /opt/app/
-COPY config.sample.ini config.ini
-
 RUN pip install -r requirements.txt
 
 VOLUME /unclasified
 VOLUME /archive
 
 ENTRYPOINT []
-CMD [ "python", "-O", "./unclasified-archiver.py", "--dry-run"]
+CMD [ "python", "-O", "./unclasified-archiver.py" ]
