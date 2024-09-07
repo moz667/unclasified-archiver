@@ -55,6 +55,16 @@ def main():
         archive_folder = cfg_section['archive_folder']
         move_files = True if not 'move_files' in cfg_section or cfg_section['move_files'] != 'false' else False
         delete_empty_dir = True if not 'delete_empty_dir' in cfg_section or cfg_section['delete_empty_dir'] != 'false' else False
+        ignore_no_media_files = False if not 'ignore_no_media_files' in cfg_section or cfg_section['ignore_no_media_files'] != 'true' else True
+        resilio_trashed_files = False if not 'resilio_trashed_files' in cfg_section or cfg_section['resilio_trashed_files'] != 'true' else True
+        resilio_backup = False if not 'resilio_backup' in cfg_section or cfg_section['resilio_backup'] != 'true' else True
+
+        if resilio_backup:
+            move_files = False
+            delete_empty_dir = False
+            ignore_no_media_files = True
+            resilio_trashed_files = True
+
 
         if __debug__:
             print(' * %s' % section_key)
@@ -62,6 +72,9 @@ def main():
             print('   - archive_folder: %s' % archive_folder)
             print('   - move_files: %s' % move_files)
             print('   - delete_empty_dir: %s' % delete_empty_dir)
+            print('   - ignore_no_media_files: %s' % ignore_no_media_files)
+            print('   - resilio_trashed_files: %s' % resilio_trashed_files)
+            print('   - resilio_backup: %s' % resilio_backup)
         
         # Archivar
         archive_all(
@@ -69,6 +82,8 @@ def main():
             target_folder=archive_folder, 
             move_files=move_files, 
             delete_empty_dir=delete_empty_dir,
+            ignore_no_media_files=ignore_no_media_files,
+            resilio_trashed_files=resilio_trashed_files,
             dry_run=dry_run
         )
 

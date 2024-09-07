@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import datetime, os, shutil, stat
+import datetime, os, re, shutil, stat
 
 import exifread
 import ffmpeg
@@ -17,6 +17,8 @@ class UncArchFile:
     TYPE_VIDEO = 'Video'
     TYPE_AUDIO = 'Audio'
     TYPE_OTHER = 'Other'
+
+    RESILIO_TRASHED_FILE_PATTERN = r"^\.trashed-[0-9]+-"
     
     def __init__(self, file):
         self.file = file
@@ -188,6 +190,11 @@ class UncArchFile:
         # Others...
         # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
 
+    def is_resilio_trashed_file(self):
+        return re.match(self.RESILIO_TRASHED_FILE_PATTERN, self.filename) != None
+
+    def get_clean_resilio_trashed_filename(self):
+        return re.sub(self.RESILIO_TRASHED_FILE_PATTERN, "", self.filename)
 
     def format_str_as_date(self, str, format):
         global MAXIMAL_DATE, MINIMAL_DATE
@@ -211,18 +218,19 @@ class UncArchFile:
                 )
                 return None
         except:
-            trace_verbose("ERROR: On string '%s' when format as '%s'." % (str, format))
+            # trace_verbose("ERROR: On string '%s' when format as '%s'." % (str, format))
             return None
 
 
 def create_dir_if_not_exists(path, dry_run=False):
     if not os.path.exists(path):
         if dry_run:
-            trace_verbose('>>> os.mkdir(%s)' % path)
+            print('>>> os.mkdir(%s)' % path)
         else:
             os.mkdir(path)
 
-def archive_file(unc_arch_file, archive_target_folder, archive_date, move_files=True, dry_run=False):
+# @var un_arch_file UncArchFile
+def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date, move_files=True, resilio_trashed_files=False, dry_run=False):
     create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%Y'))
@@ -233,30 +241,33 @@ def archive_file(unc_arch_file, archive_target_folder, archive_date, move_files=
 
     archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_filename())
 
+    if resilio_trashed_files and unc_arch_file.is_resilio_trashed_file():
+        archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_clean_resilio_trashed_filename())
+
     # * Si no existe un archivo en el directorio objetivo
     #    * Lo archivamos (moviendo o copiando segun el valor de move_files)
     if not os.path.exists(archive_target_file):
-        if move_files:
+        if move_files or (resilio_trashed_files and unc_arch_file.is_resilio_trashed_file()):
             if dry_run:
-                trace_verbose('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
+                print('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
             else:
-                shutil.move(unc_arch_file.get_file(), archive_target_folder)
+                shutil.move(unc_arch_file.get_file(), archive_target_file)
         else:
             if dry_run:
-                trace_verbose('>>> shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_folder))
+                print('>>> shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
             else:
-                shutil.copy(unc_arch_file.get_file(), archive_target_folder)
+                shutil.copy(unc_arch_file.get_file(), archive_target_file)
     else:
         # * Si existe un archivo en el directorio objetivo con el mismo nombre
         # * Notificaremos el suceso
         trace_verbose("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
 
         # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
-        if move_files:
+        if move_files or (resilio_trashed_files and unc_arch_file.is_resilio_trashed_file()):
             target_unc_arch_file = UncArchFile(archive_target_file)
             if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
                 if dry_run:
-                    trace_verbose('>>> os.remove(%s)' % unc_arch_file.get_file())
+                    print('>>> os.remove(%s)' % unc_arch_file.get_file())
                 else:
                     os.remove(unc_arch_file.get_file())
             else:
@@ -265,7 +276,7 @@ def archive_file(unc_arch_file, archive_target_folder, archive_date, move_files=
 
     return True
 
-def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, dry_run=True):
+def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, ignore_no_media_files=False, resilio_trashed_files=False, dry_run=True):
     if not os.path.exists(source_folder):
         print("ERROR: Directory '%s' not exists" % [source_folder])
         return False
@@ -278,9 +289,13 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
         trace_verbose("     + source: %s" % dirpath)
         
         for file in files:
-            trace_verbose("       * file: %s" % file)
+            trace_verbose("       * file: %s/%s" % (dirpath, file))
             
             unc_arch_file = UncArchFile(file=os.path.join(dirpath, file))
+
+            if ignore_no_media_files and unc_arch_file.get_file_type() == UncArchFile.TYPE_OTHER:
+                trace_verbose("       * %s is ignore because is not a media file." % file)
+                continue
 
             archive_target_folder = target_folder
 
@@ -317,6 +332,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 archive_target_folder=archive_target_folder, 
                 archive_date=archive_date,
                 move_files=move_files,
+                resilio_trashed_files=resilio_trashed_files,
                 dry_run=dry_run
             ):
                 trace_verbose("         - Can't archive file '%s'" % file)
@@ -333,7 +349,7 @@ def rm_empty_dirs_recursive(source_folder, preserve=True, dry_run=True):
     if not preserve and len(os.listdir(source_folder)) == 0:
         try:
             if dry_run:
-                trace_verbose(">>> os.rmdir('%s')" % source_folder)
+                print(">>> os.rmdir('%s')" % source_folder)
             else:
                 os.rmdir(source_folder)
         except IOError:
