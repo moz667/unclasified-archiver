@@ -14,6 +14,7 @@ ADD requirements.txt /opt/app/
 RUN pip install -r requirements.txt
 
 COPY src /opt/app
+COPY config.sample.ini /opt/app/
 
 VOLUME /unclasified
 VOLUME /archive
