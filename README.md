@@ -20,17 +20,140 @@ Si son archivos de medios visuales que no consigue obtener la fecha del medio a 
 
 Con todo esto hay veces que puede encontrar archivos duplicados en fecha y nombre, utilizando md5, comprueba si son identicos y si son identicos los elimina del origen (ya lo tienes en `archive_folder`, me parecio conveniente que se comportara por defecto asi, aunque tienes la opcion de copiar archivos en vez de moverlos en cuyo caso no lo eliminara), y si en caso de colision, no coincide con el md5, los mantiene en el directorio `unclasified_folder` sin tocarlo y saca un error mencionando este hecho que tendras que resolver manualmente.
 
-## Instalacion
+## Enlaces relacionados
 
-Por ahora hay que instalarlo a manija, aqui os relato la instalacion que hice con mi NAS (Ubuntu 22.04)
+* https://docs.python.org/3/library/configparser.html
+* https://docs.python.org/es/3/library/getopt.html
+* https://github.com/kkroening/ffmpeg-python
+* https://github.com/ahupp/python-magic
+* https://github.com/sbraz/pymediainfo
+* https://github.com/carsales/pyheif
+* https://github.com/sashsinha/simple-file-checksum/
 
+
+## Instalacion y ejecucion
+
+Las dos opciones que propongo son estas:
+
+* **Python local**, instalas python (si no lo tenias ya) y las dependencias, copias el script en algun sitio y listo. (OJO: por ahora la guia esta solo probada con ubuntu)
+    * **(opcional) con pyenv**, para tener en un entorno aislado las dependencias de python
+* **Imagen de Docker**, para mi la mejor opcion, ya que las dependencias son pesadas (1.4 Gb de img... es lo que tiene el ffmpeg) y algunas veces dolorosas de mantener
+
+### Python local
+
+1. Descargamos el codigo de este repo:
 ```bash
-sudo apt install ffmpeg libmediainfo0v5 openssl
-cd src
+git clone https://github.com/moz667/unclasified-archiver.git unclasified-archiver
+cd unclasified-archiver
+```
+2. Instalamos las dependencias:
+```bash
+sudo apt install python3 python3-pip ffmpeg libmediainfo0v5 openssl
 pip3 install -r requirements.txt
 ```
+3. Creamos un archivo de configuracion, por ejemplo creamos el archivo `config.ini`
+4. Ejecutamos una prueba:
+```bash
+python3 src/unclasified-archiver.py --c=config.ini --dry-run
+```
+5. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+```bash
+python3 -O src/unclasified-archiver.py --c=config.ini
+```
 
-## Ejemplo de config
+#### Gestionando dependencias de python con pyenv
+
+1. Descargamos el codigo de este repo:
+```bash
+git clone https://github.com/moz667/unclasified-archiver.git unclasified-archiver
+cd unclasified-archiver
+```
+2. Instalamos algunas dependencias (NO python):
+```bash
+sudo apt install ffmpeg libmediainfo0v5 openssl
+```
+3. Instalamos y configuramos [pyenv](https://github.com/pyenv/pyen)
+4. Creamos un entorno virtual para este script:
+```bash
+pyenv virtualenv 3.12.5 unclasified-archiver
+echo "unclasified-archiver" > .python-version
+```
+5. Instalamos las dependencias de python (`requirements.txt`):
+```bash
+pip install -r requirements.txt
+```
+6. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
+7. Ejecutamos una prueba:
+```bash
+python3 src/unclasified-archiver.py --c=config.ini --dry-run
+```
+8. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+```bash
+python3 -O src/unclasified-archiver.py --c=config.ini
+```
+
+### Docker
+
+1. Instalamos y configuramos [docker](https://docs.docker.com/engine/install/)
+2. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
+3. Ejecutamos una prueba:
+```bash
+cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
+    -v ~/archive_folder:/archive moz667/unclasified-archiver \
+    python ./unclasified-archiver.py --dry-run
+```
+4. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+```bash
+cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
+    -v ~/archive_folder:/archive moz667/unclasified-archiver
+```
+
+**OJO: Hay que tener en cuenta que para que el script acceda a la estructura de directorios del host donde se ejecuta, lo tenemos que montar como volumenes. Esto es importante entenderlo ya que por un lado en la ejecucion con docker hay que incluir los parametros `-v` indicando origen y destino del volumen para las distintas carpetas, y por otro lado en el archivo de configuracion tenemos que establecer las rutas dentro del contenedor (no las rutas de tu host)**
+
+#### Me construyo mi propia imagen, con casinos... y fur...
+
+1. Descargamos el codigo de este repo:
+```bash
+git clone https://github.com/moz667/unclasified-archiver.git unclasified-archiver
+cd unclasified-archiver
+```
+2. Construimos la imagen:
+```bash
+docker build . --tag custom-unclasified-archiver
+```
+3. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
+4. Ejecutamos una prueba:
+```bash
+cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
+    -v ~/archive_folder:/archive custom-unclasified-archiver \
+    python ./unclasified-archiver.py --dry-run
+```
+5. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+```bash
+cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
+    -v ~/archive_folder:/archive custom-unclasified-archiver
+```
+
+## Configuracion
+
+La configuración se define con la estructura de un archivo ini (lo que lee [configparser](https://docs.python.org/3/library/configparser.html)) con al menos una seccion `[seccion-de-ejemplo]`.
+
+Cada una de las secciones, define un proceso de archivado distinto, tener en cuenta que el script ejecutara secuncialmente procesos definidos en estas.
+
+El nombre de las secciones es irrelevante, aunque recomendamos que sea algo que indetifique el proceso en si.
+
+Dentro de cada seccion, estableceremos las distintas opciones del proceso de archivado. 
+
+> **OJO:** Cada seccion debe definir al menos una carpeta origen `unclasified_folder` donde estan los archivos desordenados y una carpeta destino `archive_folder` en la que te generara una estructura de directorios y movera (o copiara) los archivos ya ordenados.
+
+Las opciones dentro de la seccion son:
+
+* `unclasified_folder` (cadena), la ruta a la carpeta origen (**obligatorio**)
+* `archive_folder` (cadena), la ruta a la carpeta destino (**obligatorio**)
+* `move_files` (valores true ó false), define si mueve los archivos desde `unclasified_folder` hasta la nueva estructura dentro de `archive_folder`, o si por el contrario, queremos copiar (**por defecto `true`, es decir, mueve los archivos**)
+* `delete_empty_dir` (valores true ó false), define si al acabar de recorrer toda la estructura de la carpeta `unclasified_folder` elimina los directorios vacios (**por defecto `true`, es decir, elimina los directorios vacios del origen**)
+
+### Ejemplo de configuracion
 
 ```ini
 [folder1_to_archive]
@@ -44,20 +167,22 @@ archive_folder=folder1
 ; move_files=true
 ; delete_empty_dir, true by default, delete empty dirs inside unclasified_folder 
 ; after move to archive_folder
-; delete_empty_dir=true
 
 [folder2_to_archive]
 unclasified_folder=folder2/unclasified
 archive_folder=folder2
+move_files=false
+delete_empty_dir=false
 
 [folderX_to_archive]
 unclasified_folder=folderX/unclasified
 archive_folder=folderX
+delete_empty_dir=false
 ```
 
 ## Argumentos del script
 
-* `-c <config.ini>, --config=<config.ini>` (**Obligatorio**), fichero de configuracion con las distintas secciones
+* `--c=<config.ini>, --config=<config.ini>` (**Obligatorio**), fichero de configuracion con las distintas secciones
 * `--dry-run`, no modifica nada, solo saca por pantalla lo que haria si ejecutas sin el `--dry-run`
 * `--help`, te saca una ayuda con estos parametros
 
@@ -84,59 +209,14 @@ python unclasified-archiver.py --dry-run
 python unclasified-archiver.py
 
 # Ejecuta con salida normal y con un config.ini en una ruta determinada)
-python unclasified-archiver.py -c /etc/unclasified-archiver/config.ini
+python unclasified-archiver.py --c=/etc/unclasified-archiver/config.ini
 
 # Ejecuta con salida minima (solo errores) y con un config.ini en una ruta 
 # determinada)
-python -O unclasified-archiver.py -c /etc/unclasified-archiver/config.ini
-```
-
-## Related links
-
-* https://docs.python.org/3/library/configparser.html
-* https://docs.python.org/es/3/library/getopt.html
-* https://github.com/kkroening/ffmpeg-python
-* https://github.com/ahupp/python-magic
-* https://github.com/sbraz/pymediainfo
-* https://github.com/carsales/pyheif
-* https://github.com/sashsinha/simple-file-checksum/
-
-## Entorno con docker
-
-```bash
-# Construir la imagen en local
-docker build . --tag unclasified-archiver
-
-# Establecer las rutas **absolutas** a las carpetas
-UNCLASIFIED_FOLDER=~/unclasified_folder/
-ARCHIVE_FOLDER=~/archive_folder/
-
-# Ejecucion de prueba
-docker run --rm -v $UNCLASIFIED_FOLDER:/unclasified -v $ARCHIVE_FOLDER:/archive unclasified-archiver
-```
-
-**Hay que tener en cuenta que la configuracion por defecto que lleva la imagen de docker es la definida en [config.sample.ini](./config.sample.ini), que ejecuta python con el argumento `-O` (saca solo el output de problemas que pueda tener)y que se ejecuta con la opcion `--dry-run` (para que no modifique nada y solo muestre lo que va a hacer).**
-
-Una vez que tengamos claro que la ejecucion de prueba es la que buscamos, podremos ejecutar sin el `--dry-run` de la siguiente forma:
-
-```bash
-docker run --rm -v $UNCLASIFIED_FOLDER:/unclasified -v $ARCHIVE_FOLDER:/archive unclasified-archiver python -O ./unclasified-archiver.py
-```
-
-## Entorno local (con pyenv)
-
-```bash
-# Instalar librerias extra (debian, ubuntu...)
-apt install ffmpeg libmediainfo0v5 openssl
-# Construir el entorno con pyenv
-pyenv virtualenv 3.12.5 unclasified-archiver
-echo "unclasified-archiver" > .python-version
-# **opcional** Actualizar pip local
-pip install --upgrade pip
-# Instalar requisitos de python
-pip install -r requirements.txt
+python -O unclasified-archiver.py --c=/etc/unclasified-archiver/config.ini
 ```
 
 ## TODO
-* [ ] `-c` argument is not working
-* [ ] Option to archive only special trashed files (from resilio sync backup option `Store deleted files in folder archive`), e.g.: `.trashed-1727131504-IMG20240824125122.jpg`
+* [ ] Opciones para copiar archivos y tratar de forma especial los `.trashed-*` de los backups de Resilio con la marca `Store deleted files in folder archive`, como por ejemplo: `.trashed-1727131504-IMG20240824125122.jpg`
+    * Los `.trashed-*` se podrian eliminar una vez que veamos que estan en la carpeta de archivo
+* [ ] Integracion con Immich
