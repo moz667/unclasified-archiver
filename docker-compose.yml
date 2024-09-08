@@ -1,0 +1,10 @@
+services:
+  test-files:
+    build: .
+    restart: "no"
+    user: "1000"
+    volumes:
+      - ./src:/opt/app
+      - ./config.sample.ini:/opt/app/config.ini
+      - ./test-files/unclasified:/unclasified
+      - ./test-files/archive:/archive
