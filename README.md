@@ -159,6 +159,7 @@ Las opciones dentro de la seccion son:
     * `delete_empty_dir=false`
     * `ignore_no_media_files=true`
     * `resilio_trashed_files=true`
+    * (**por defecto `false`, es decir, no trata de forma distinta esos archivos**)
 
 ### Ejemplo de configuracion
 
@@ -195,6 +196,7 @@ archive_folder=Documents/Images/archive
 ;   * `delete_empty_dir=false`
 ;   * `ignore_no_media_files=true`
 ;   * `resilio_trashed_files=true`
+;(**por defecto `false`, es decir, no aplica la configuracion al proceso**)
 
 ; tipica carpeta con el backup de fotos de un movil con Resilio Sync
 [resilio_backup_photos]
