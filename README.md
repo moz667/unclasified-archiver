@@ -162,12 +162,10 @@ Las opciones dentro de la seccion son:
 * `move_files` (valores true ó false), define si mueve los archivos desde `unclasified_folder` hasta la nueva estructura dentro de `archive_folder`, o si por el contrario, queremos copiar (**por defecto `true`, es decir, mueve los archivos**)
 * `delete_empty_dir` (valores true ó false), define si al acabar de recorrer toda la estructura de la carpeta `unclasified_folder` elimina los directorios vacios (**por defecto `true`, es decir, elimina los directorios vacios del origen**)
 * `ignore_no_media_files` (valores true ó false), ignora o no archivos considerados no media manteniendolos en el directorio de origen. (**por defecto `false`, es decir, que no los ignora y los mueve**)
-* `resilio_trashed_files` (valores true ó false). Si esta opción es `true`, cambia el nombre del archivo de destino eliminando el prefijo `.trashed-0000000000-`-. Hay que tener en cuenta que siempre se mueven este tipo de archivos incluso si la opción `move_files` está establecida en `false`. (**por defecto `false`, es decir, no trata de forma distinta esos archivos**)
 * `resilio_backup` (valores true ó false). Esta opcion marcada como `true`, es un atajo a otras opciones (ignorando el resto de ellas), establece:
     * `move_files=false`
     * `delete_empty_dir=false`
     * `ignore_no_media_files=true`
-    * `resilio_trashed_files=true`
     * (**por defecto `false`, es decir, no trata de forma distinta esos archivos**)
 
 ### Ejemplo de configuracion
@@ -193,18 +191,11 @@ archive_folder=Documents/Images/archive
 ;considerados no media manteniendolos en el directorio de origen. (**por defecto
 ;`false`, es decir, que no los ignora y los mueve**)
 
-;`resilio_trashed_files` (valores true ó false). Si esta opción es `true`, 
-;cambia el nombre del archivo de destino eliminando el prefijo 
-;`.trashed-0000000000-`-. Hay que tener en cuenta que siempre se mueven este 
-;tipo de archivos incluso si la opción `move_files` está establecida en `false`.
-;(**por defecto `false`, es decir, no trata de forma distinta esos archivos**)
-
 ;`resilio_backup` (valores true ó false). Esta opcion marcada como `true`, es un
 ;atajo a otras opciones (ignorando el resto de ellas), establece:
 ;   * `move_files=false`
 ;   * `delete_empty_dir=false`
 ;   * `ignore_no_media_files=true`
-;   * `resilio_trashed_files=true`
 ;(**por defecto `false`, es decir, no aplica la configuracion al proceso**)
 
 ; tipica carpeta con el backup de fotos de un movil con Resilio Sync
@@ -373,4 +364,3 @@ time docker compose run --rm hija2-movil
 ```
 
 Ahora ejecutando `archive-all.sh` tenemos todos los medios de los moviles familiares en cada una de sus librerias.
-

@@ -18,7 +18,7 @@ class UncArchFile:
     TYPE_AUDIO = 'Audio'
     TYPE_OTHER = 'Other'
 
-    RESILIO_TRASHED_FILE_PATTERN = r"^\.trashed-[0-9]+-"
+    TRASHED_FILE_PATTERN = r"^\.trashed-[0-9]+-"
     
     def __init__(self, file):
         self.file = file
@@ -197,11 +197,11 @@ class UncArchFile:
         # Others...
         # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
 
-    def is_resilio_trashed_file(self):
-        return re.match(self.RESILIO_TRASHED_FILE_PATTERN, self.filename) != None
+    def is_trashed_file(self):
+        return re.match(self.TRASHED_FILE_PATTERN, self.filename) != None
 
     def get_clean_resilio_trashed_filename(self):
-        return re.sub(self.RESILIO_TRASHED_FILE_PATTERN, "", self.filename)
+        return re.sub(self.TRASHED_FILE_PATTERN, "", self.filename)
 
     def format_str_as_date(self, str, format):
         global MAXIMAL_DATE, MINIMAL_DATE
@@ -237,7 +237,7 @@ def create_dir_if_not_exists(path, dry_run=False):
             os.mkdir(path)
 
 # @var un_arch_file UncArchFile
-def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date, move_files=True, resilio_trashed_files=False, dry_run=False):
+def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date, move_files=True, dry_run=False):
     create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%Y'))
@@ -248,13 +248,13 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
 
     archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_filename())
 
-    if resilio_trashed_files and unc_arch_file.is_resilio_trashed_file():
+    if unc_arch_file.is_trashed_file():
         archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_clean_resilio_trashed_filename())
 
     # * Si no existe un archivo en el directorio objetivo
     #    * Lo archivamos (moviendo o copiando segun el valor de move_files)
     if not os.path.exists(archive_target_file):
-        if move_files or (resilio_trashed_files and unc_arch_file.is_resilio_trashed_file()):
+        if move_files:
             if dry_run:
                 print('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
             else:
@@ -270,7 +270,7 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
         trace_verbose("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
 
         # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
-        if move_files or (resilio_trashed_files and unc_arch_file.is_resilio_trashed_file()):
+        if move_files:
             target_unc_arch_file = UncArchFile(archive_target_file)
             if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
                 if dry_run:
@@ -283,7 +283,7 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
 
     return True
 
-def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, ignore_no_media_files=False, resilio_trashed_files=False, dry_run=True):
+def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, ignore_no_media_files=False, dry_run=True):
     if not os.path.exists(source_folder):
         print("ERROR: Directory '%s' not exists" % [source_folder])
         return False
@@ -339,7 +339,6 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 archive_target_folder=archive_target_folder, 
                 archive_date=archive_date,
                 move_files=move_files,
-                resilio_trashed_files=resilio_trashed_files,
                 dry_run=dry_run
             ):
                 trace_verbose("         - Can't archive file '%s'" % file)
