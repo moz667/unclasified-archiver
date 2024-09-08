@@ -45,18 +45,25 @@ class UncArchFile:
 
     def calculate_file_type(self):
         self.file_type = None
-        media_info = MediaInfo.parse(self.file)
 
-        for track in media_info.tracks:
-            if track.track_type == self.TYPE_IMAGE or \
-                track.track_type == self.TYPE_VIDEO:
+        media_info = None
+        try:
+            media_info = MediaInfo.parse(self.file)
+        except Exception as e:
+            print("ERROR: Error on MediaInfo.parse('%s')" % self.get_file())
+            print(repr(e))
 
-                self.file_type = track.track_type
-        
-        if self.file_type is None:
+        if media_info:
             for track in media_info.tracks:
-                if track.track_type == self.TYPE_AUDIO:
+                if track.track_type == self.TYPE_IMAGE or \
+                    track.track_type == self.TYPE_VIDEO:
+
                     self.file_type = track.track_type
+            
+            if self.file_type is None:
+                for track in media_info.tracks:
+                    if track.track_type == self.TYPE_AUDIO:
+                        self.file_type = track.track_type
 
         if self.file_type is None:
             self.file_type = self.TYPE_OTHER
