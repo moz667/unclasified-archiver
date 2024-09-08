@@ -63,31 +63,26 @@ python3 -O src/unclasified-archiver.py --c=config.ini
 
 #### Gestionando dependencias de python con pyenv
 
-1. Descargamos el codigo de este repo:
-```bash
-git clone https://github.com/moz667/unclasified-archiver.git unclasified-archiver
-cd unclasified-archiver
-```
-2. Instalamos algunas dependencias (NO python):
+1. Instalamos algunas dependencias (NO python):
 ```bash
 sudo apt install ffmpeg libmediainfo0v5 openssl
 ```
-3. Instalamos y configuramos [pyenv](https://github.com/pyenv/pyen)
-4. Creamos un entorno virtual para este script:
+2. Instalamos y configuramos [pyenv](https://github.com/pyenv/pyen)
+3. Creamos un entorno virtual para este script:
 ```bash
 pyenv virtualenv 3.12.5 unclasified-archiver
 echo "unclasified-archiver" > .python-version
 ```
-5. Instalamos las dependencias de python (`requirements.txt`):
+4. Instalamos las dependencias de python (`requirements.txt`):
 ```bash
 pip install -r requirements.txt
 ```
-6. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
-7. Ejecutamos una prueba:
+5. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
+6. Ejecutamos una prueba:
 ```bash
 python3 src/unclasified-archiver.py --c=config.ini --dry-run
 ```
-8. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+7. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
 ```bash
 python3 -O src/unclasified-archiver.py --c=config.ini
 ```
@@ -112,26 +107,40 @@ cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
 
 #### Me construyo mi propia imagen, con casinos... y fur...
 
-1. Descargamos el codigo de este repo:
-```bash
-git clone https://github.com/moz667/unclasified-archiver.git unclasified-archiver
-cd unclasified-archiver
-```
-2. Construimos la imagen:
+1. Construimos la imagen:
 ```bash
 docker build . --tag custom-unclasified-archiver
 ```
-3. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
-4. Ejecutamos una prueba:
+2. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
+3. Ejecutamos una prueba:
 ```bash
 cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
     -v ~/archive_folder:/archive custom-unclasified-archiver \
     python ./unclasified-archiver.py --dry-run
 ```
-5. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+4. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
 ```bash
 cat config.ini | docker run -i --rm -v ~/unclasified_folder:/unclasified \
     -v ~/archive_folder:/archive custom-unclasified-archiver
+```
+
+#### Docker compose
+
+He documentado esta opcion (que en mi caso es la que estoy utilizando) para poder simplificar un poco la gestion de los distintos archivados que quieras utilizar.
+
+Utilizando el actual [docker-compose.yml](./docker-compose.yml) de este repo la instalacion y primera ejecucion seria:
+
+1. Construimos la imagen:
+```bash
+docker compose build
+```
+3. Ejecucion de prueba:
+```bash
+docker compose run --rm test-files python ./unclasified-archiver.py --dry-run
+```
+1. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
+```bash
+docker compose run --rm test-files
 ```
 
 ## Configuracion
@@ -249,3 +258,119 @@ python unclasified-archiver.py --c=/etc/unclasified-archiver/config.ini
 # determinada)
 python -O unclasified-archiver.py --c=/etc/unclasified-archiver/config.ini
 ```
+
+## Ejemplo: Mi compose familiar
+
+En mi caso, tengo un mini-servidor con un immich para gestionar los medios familiares. Si bien seguro que hay muchas otras formas de gestionar todo este batiburrillo de archivos, despues de varios años yo preferi hacer esta solucion (No me juzgueis).
+
+El contexto (los nombres de usuarios y rutas son inventados):
+
+* Los distintos moviles familiares se sincronizan al servidor a carpetas privadas cada uno con permisos solo para su usuario:
+    * papa: /opt/resilio/papa
+    * mama: /opt/resilio/mama
+    * hija1: /opt/resilio/hija1
+    * hija2: /opt/resilio/hija2
+* Todos tenemos android salvo `hija2` que tiene ios (lo cual nos limita a actualizar solo las imagenes y videos capturados con el movil, mas informacion acerca del porque en este [articulo](https://help.resilio.com/hc/en-us/articles/205506539-Sync-for-iOS-Peculiarities))
+    * Los android hacen backup con resilio de las carpetas:
+        * /opt/resilio/{usuario}/DCIM
+        * /opt/resilio/{usuario}/Movies
+        * /opt/resilio/{usuario}/Pictures
+    * El ios hace backup con resilio de las imagenes y videos tomados con las camaras del telefono:
+        * /opt/resilio/hija2/DCIM
+* Cada usuario tiene su libreria externa de immich:
+    * papa: /opt/immich/papa
+    * mama: /opt/immich/mama
+    * hija1: /opt/immich/hija1
+    * hija2: /opt/immich/hija2
+
+Asi que...
+
+**1. He creado 2 archivos ini, uno para ios y otro para android:**
+* `config.android.ini`
+```ini
+[DCIM]
+unclasified_folder=/DCIM
+archive_folder=/archive
+resilio_backup=true
+
+[Movies]
+unclasified_folder=/Movies
+archive_folder=/archive
+resilio_backup=true
+
+[Pictures]
+unclasified_folder=/Pictures
+archive_folder=/archive
+resilio_backup=true
+```
+* `config.ios.ini`
+```ini
+[DCIM]
+unclasified_folder=/DCIM
+archive_folder=/archive
+resilio_backup=true
+```
+
+**2. He definido un compose mapeando los volumenes con las distintas carpetas de usuarios:**
+
+`docker-compose.yml`
+```yml
+services:
+  papa-movil:
+    image: moz667/unclasified-archiver:latest
+    restart: "no"
+    user: "1000"
+    volumes:
+      - ./config.android.ini:/opt/app/config.ini
+      - /opt/immich/papa:/archive
+      - /opt/resilio/papa/DCIM:/DCIM
+      - /opt/resilio/papa/Movies:/Movies
+      - /opt/resilio/papa/Pictures:/Pictures
+  mama-movil:
+    image: moz667/unclasified-archiver:latest
+    restart: "no"
+    user: "1001"
+    volumes:
+      - ./config.android.ini:/opt/app/config.ini
+      - /opt/immich/mama:/archive
+      - /opt/resilio/mama/DCIM:/DCIM
+      - /opt/resilio/mama/Movies:/Movies
+      - /opt/resilio/mama/Pictures:/Pictures
+  hija1-movil:
+    image: moz667/unclasified-archiver:latest
+    restart: "no"
+    user: "1002"
+    volumes:
+      - ./config.android.ini:/opt/app/config.ini
+      - /opt/immich/hija1:/archive
+      - /opt/resilio/hija1/DCIM:/DCIM
+      - /opt/resilio/hija1/Movies:/Movies
+      - /opt/resilio/hija1/Pictures:/Pictures
+  hija2-movil:
+    image: moz667/unclasified-archiver:latest
+    restart: "no"
+    user: "1003"
+    volumes:
+      - ./config.ios.ini:/opt/app/config.ini
+      - /opt/immich/hija2:/archive
+      - /opt/resilio/hija2/DCIM:/DCIM
+```
+
+**3. He creado un script que ejecuta todas las sincros:**
+
+`archive-all.sh`
+```bash
+#!/bin/bash
+
+echo "* Ejecutando moz667..."
+time docker compose run --rm papa-movil
+echo "* Ejecutando angie..."
+time docker compose run --rm mama-movil
+echo "* Ejecutando angelica..."
+time docker compose run --rm hija1-movil
+echo "* Ejecutando zoe..."
+time docker compose run --rm hija2-movil
+```
+
+Ahora ejecutando `archive-all.sh` tenemos todos los medios de los moviles familiares en cada una de sus librerias.
+
