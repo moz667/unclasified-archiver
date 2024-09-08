@@ -6,6 +6,7 @@ from unclasified_archiver import archive_all
 import configparser
 import getopt
 import io
+import os
 import sys
 
 def main():
@@ -38,8 +39,11 @@ def main():
         config_file = io.StringIO(config_file)
 
     if not config_file:
-        print_help()
-        sys.exit(2)
+        if not os.path.isfile('config.ini'):
+            print_help()
+            sys.exit(2)
+        else:
+            config_file = 'config.ini'
 
     config = configparser.ConfigParser()
     
