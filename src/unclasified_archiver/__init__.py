@@ -50,8 +50,14 @@ class UncArchFile:
         try:
             media_info = MediaInfo.parse(self.file)
         except Exception as e:
-            print("ERROR: Error on MediaInfo.parse('%s')" % self.get_file())
-            print(repr(e))
+            # Caso especial dentro de .Sync dir de `Resilio Sync`
+            if self.filename == 'root_acl_entry':
+                f = trace_verbose
+            else:
+                f = print
+
+            f("ERROR: Error on MediaInfo.parse('%s')" % self.get_file())
+            f(repr(e))
 
         if media_info:
             for track in media_info.tracks:
@@ -194,13 +200,10 @@ class UncArchFile:
                 self.filename[:10], '%Y-%m-%d'
             )
 
-        # Others...
-        # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
-
     def is_trashed_file(self):
         return re.match(self.TRASHED_FILE_PATTERN, self.filename) != None
 
-    def get_clean_resilio_trashed_filename(self):
+    def get_clean_trashed_filename(self):
         return re.sub(self.TRASHED_FILE_PATTERN, "", self.filename)
 
     def format_str_as_date(self, str, format):
@@ -248,8 +251,10 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
 
     archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_filename())
 
+    # Caso especial: archivos borrados en android, por ejemplo:
+    # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
     if unc_arch_file.is_trashed_file():
-        archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_clean_resilio_trashed_filename())
+        archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_clean_trashed_filename())
 
     # * Si no existe un archivo en el directorio objetivo
     #    * Lo archivamos (moviendo o copiando segun el valor de move_files)
