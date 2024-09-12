@@ -18,6 +18,9 @@ COPY config.sample.ini /opt/app/
 
 VOLUME /unclasified
 VOLUME /archive
+VOLUME /copy_status
+
+ENV COPY_STATUS_DIR=/copy_status
 
 ENTRYPOINT []
 CMD [ "python", "-O", "./unclasified-archiver.py" ]

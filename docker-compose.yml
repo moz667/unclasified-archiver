@@ -8,3 +8,4 @@ services:
       - ./config.sample.ini:/opt/app/config.ini
       - ./test-files/unclasified:/unclasified
       - ./test-files/archive:/archive
+      - ./test-files/copy_status:/copy_status

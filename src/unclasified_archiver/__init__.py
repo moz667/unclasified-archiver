@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import datetime, os, re, shutil, stat
+import datetime, os, re, shelve, shutil, stat
 
 import exifread
 import ffmpeg
 from pymediainfo import MediaInfo
-
 from simple_file_checksum import get_checksum
 
 MINIMAL_DATE = datetime.datetime(2000, 1, 1)
 MAXIMAL_DATE = datetime.datetime.today()
+COPY_STATUS_DIR = '/tmp' if not 'COPY_STATUS_DIR' in os.environ or not os.environ['COPY_STATUS_DIR'] else os.environ['COPY_STATUS_DIR']
 
 class UncArchFile:
     TYPE_IMAGE = 'Image'
@@ -23,7 +23,8 @@ class UncArchFile:
     def __init__(self, file):
         self.file = file
         self.filename = os.path.basename(file)
-
+        
+        self.size = None
         self.file_type = None
         self.checksum = None
 
@@ -230,6 +231,27 @@ class UncArchFile:
         except:
             # trace_verbose("ERROR: On string '%s' when format as '%s'." % (str, format))
             return None
+    
+    def get_size(self):
+        if self.size == None:
+            self.size = os.path.getsize(self.file)
+        return self.size
+
+    def get_status_key(self):
+        return "%s_%s" % (self.get_checksum(), self.get_size())
+
+    def is_already_copied(self):
+        d = shelve.open(os.path.join(COPY_STATUS_DIR, 'copy_status.shelve'))
+        if self.get_status_key() in d:
+            d.close()
+            return True
+        
+        return False
+    
+    def set_already_copied(self):
+        d = shelve.open(os.path.join(COPY_STATUS_DIR, 'copy_status.shelve'), writeback=True)
+        d[self.get_status_key()] = True
+        d.close()
 
 
 def create_dir_if_not_exists(path, dry_run=False):
@@ -266,25 +288,32 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
                 shutil.move(unc_arch_file.get_file(), archive_target_file)
         else:
             if dry_run:
-                print('>>> shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
+                print(">>> if not unc_arch_file.is_already_copied():")
+                print('>>>     shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
+                print(">>>     unc_arch_file.set_already_copied()")
             else:
-                shutil.copy(unc_arch_file.get_file(), archive_target_file)
+                if not unc_arch_file.is_already_copied():
+                    shutil.copy(unc_arch_file.get_file(), archive_target_file)
+                    unc_arch_file.set_already_copied()
+                else:
+                    trace_verbose("       * Already copied.")
     else:
         # * Si existe un archivo en el directorio objetivo con el mismo nombre
         # * Notificaremos el suceso
         trace_verbose("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
 
+        target_unc_arch_file = UncArchFile(archive_target_file)
+        
         # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
-        if move_files:
-            target_unc_arch_file = UncArchFile(archive_target_file)
-            if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
+        if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
+            if move_files:
                 if dry_run:
                     print('>>> os.remove(%s)' % unc_arch_file.get_file())
                 else:
                     os.remove(unc_arch_file.get_file())
-            else:
-                print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (unc_arch_file.get_file(), archive_target_file))
-                return False
+        else:
+            print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (unc_arch_file.get_file(), archive_target_file))
+            return False
 
     return True
 
@@ -306,7 +335,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
             unc_arch_file = UncArchFile(file=os.path.join(dirpath, file))
 
             if ignore_no_media_files and unc_arch_file.get_file_type() == UncArchFile.TYPE_OTHER:
-                trace_verbose("       * %s is ignore because is not a media file." % file)
+                trace_verbose("       * Is ignore because is not a media file.")
                 continue
 
             archive_target_folder = target_folder
@@ -346,7 +375,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 move_files=move_files,
                 dry_run=dry_run
             ):
-                trace_verbose("         - Can't archive file '%s'" % file)
+                trace_verbose("         - Can't archive file")
     
     if delete_empty_dir:
         rm_empty_dirs_recursive(source_folder=source_folder, dry_run=dry_run)

@@ -364,3 +364,11 @@ time docker compose run --rm hija2-movil
 ```
 
 Ahora ejecutando `archive-all.sh` tenemos todos los medios de los moviles familiares en cada una de sus librerias.
+
+## Mesh
+
+### Problema con archivos no deseados
+
+Hay un problema con las copias de resilio, copia muchos archivos que los usuarios no borran en el movil, por lo que si las borran de la galeria, en el momento que se vuelva a ejecutar el proceso, las vuelve a copiar, este es el problema que tenemos con whatsapp.... ¿podriamos guardar el estado de la copia para que si ocurre esto poder evitarlo?
+
+* https://docs.python.org/3/library/shelve.html
