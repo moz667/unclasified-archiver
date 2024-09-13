@@ -61,6 +61,7 @@ def main():
         delete_empty_dir = True if not 'delete_empty_dir' in cfg_section or cfg_section['delete_empty_dir'] != 'false' else False
         ignore_no_media_files = False if not 'ignore_no_media_files' in cfg_section or cfg_section['ignore_no_media_files'] != 'true' else True
         resilio_backup = False if not 'resilio_backup' in cfg_section or cfg_section['resilio_backup'] != 'true' else True
+        force_add2status = False if not 'force_add2status' in cfg_section or cfg_section['force_add2status'] != 'true' else True
 
         if resilio_backup:
             move_files = False
@@ -76,6 +77,7 @@ def main():
             print('   - delete_empty_dir: %s' % delete_empty_dir)
             print('   - ignore_no_media_files: %s' % ignore_no_media_files)
             print('   - resilio_backup: %s' % resilio_backup)
+            print('   - force_add2status: %s' % force_add2status)
         
         # Archivar
         archive_all(
@@ -84,6 +86,7 @@ def main():
             move_files=move_files, 
             delete_empty_dir=delete_empty_dir,
             ignore_no_media_files=ignore_no_media_files,
+            force_add2status=force_add2status,
             dry_run=dry_run
         )
 

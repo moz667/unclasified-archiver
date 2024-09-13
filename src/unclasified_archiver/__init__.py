@@ -262,7 +262,7 @@ def create_dir_if_not_exists(path, dry_run=False):
             os.mkdir(path)
 
 # @var un_arch_file UncArchFile
-def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date, move_files=True, dry_run=False):
+def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date, move_files=True, force_add2status=False, dry_run=False):
     create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%Y'))
@@ -296,11 +296,11 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
                     shutil.copy(unc_arch_file.get_file(), archive_target_file)
                     unc_arch_file.set_already_copied()
                 else:
-                    trace_verbose("       * Already copied.")
+                    trace_verbose("         - Already copied.")
     else:
         # * Si existe un archivo en el directorio objetivo con el mismo nombre
         # * Notificaremos el suceso
-        trace_verbose("WARNING: Collision on archive_file, file '%s' already exists." % archive_target_file)
+        trace_verbose("         - File '%s' already exists." % archive_target_file)
 
         target_unc_arch_file = UncArchFile(archive_target_file)
         
@@ -311,13 +311,16 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
                     print('>>> os.remove(%s)' % unc_arch_file.get_file())
                 else:
                     os.remove(unc_arch_file.get_file())
+            elif force_add2status and not unc_arch_file.is_already_copied():
+                unc_arch_file.set_already_copied()
+                trace_verbose("         - Added FORCED to copy_status.")
         else:
             print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (unc_arch_file.get_file(), archive_target_file))
             return False
 
     return True
 
-def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, ignore_no_media_files=False, dry_run=True):
+def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, ignore_no_media_files=False, force_add2status=False, dry_run=True):
     if not os.path.exists(source_folder):
         print("ERROR: Directory '%s' not exists" % [source_folder])
         return False
@@ -335,7 +338,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
             unc_arch_file = UncArchFile(file=os.path.join(dirpath, file))
 
             if ignore_no_media_files and unc_arch_file.get_file_type() == UncArchFile.TYPE_OTHER:
-                trace_verbose("       * Is ignore because is not a media file.")
+                trace_verbose("         - Is ignore because is not a media file.")
                 continue
 
             archive_target_folder = target_folder
@@ -373,6 +376,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 archive_target_folder=archive_target_folder, 
                 archive_date=archive_date,
                 move_files=move_files,
+                force_add2status=force_add2status,
                 dry_run=dry_run
             ):
                 trace_verbose("         - Can't archive file")
