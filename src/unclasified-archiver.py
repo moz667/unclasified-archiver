@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from unclasified_archiver import archive_all
+from unclasified_archiver import archive_all, trace_verbose
 
 import configparser
 import getopt
@@ -68,16 +68,16 @@ def main():
             delete_empty_dir = False
             ignore_no_media_files = True
 
-
-        if __debug__:
-            print(' * %s' % section_key)
-            print('   - unclasified_folder: %s' % unclasified_folder)
-            print('   - archive_folder: %s' % archive_folder)
-            print('   - move_files: %s' % move_files)
-            print('   - delete_empty_dir: %s' % delete_empty_dir)
-            print('   - ignore_no_media_files: %s' % ignore_no_media_files)
-            print('   - resilio_backup: %s' % resilio_backup)
-            print('   - force_add2status: %s' % force_add2status)
+        trace_verbose('=' * 80, marker=False)
+        trace_verbose('%s' % section_key)
+        trace_verbose('unclasified_folder: %s' % unclasified_folder, 1)
+        trace_verbose('archive_folder: %s' % archive_folder, 1)
+        trace_verbose('move_files: %s' % move_files, 1)
+        trace_verbose('delete_empty_dir: %s' % delete_empty_dir, 1)
+        trace_verbose('ignore_no_media_files: %s' % ignore_no_media_files, 1)
+        trace_verbose('resilio_backup: %s' % resilio_backup, 1)
+        trace_verbose('force_add2status: %s' % force_add2status, 1)
+        trace_verbose('-' * 80, marker=False)
         
         # Archivar
         archive_all(

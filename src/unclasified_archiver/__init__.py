@@ -51,14 +51,11 @@ class UncArchFile:
         try:
             media_info = MediaInfo.parse(self.file)
         except Exception as e:
-            # Caso especial dentro de .Sync dir de `Resilio Sync`
-            if self.filename == 'root_acl_entry':
-                f = trace_verbose
-            else:
-                f = print
-
-            f("ERROR: Error on MediaInfo.parse('%s')" % self.get_file())
-            f(repr(e))
+            # Caso especial dentro de .Sync dir de `Resilio Sync`: `root_acl_entry`
+            # algunas veces da error
+            if self.filename != 'root_acl_entry' or __debug__:
+                print("ERROR: Error on MediaInfo.parse('%s')" % self.get_file())
+                print(repr(e))
 
         if media_info:
             for track in media_info.tracks:
@@ -115,7 +112,7 @@ class UncArchFile:
                         str_datetime, '%Y:%m:%d %H:%M:%S'
                     )
         except:
-            trace_verbose("ERROR: On calculate_meta_datec of '%s'." % self.file)
+            trace_verbose("ERROR: On calculate_meta_datec of '%s'." % self.file, 2)
 
     def get_file_datec(self):
         if self.file_datec is None:
@@ -225,11 +222,11 @@ class UncArchFile:
                         str, 
                         MAXIMAL_DATE.strftime('%Y-%m-%d %H:%M:%S'), 
                         MINIMAL_DATE.strftime('%Y-%m-%d %H:%M:%S'), 
-                    )
+                    ), 1
                 )
                 return None
         except:
-            # trace_verbose("ERROR: On string '%s' when format as '%s'." % (str, format))
+            # trace_verbose("ERROR: On string '%s' when format as '%s'." % (str, format), 2)
             return None
     
     def get_size(self):
@@ -296,11 +293,11 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
                     shutil.copy(unc_arch_file.get_file(), archive_target_file)
                     unc_arch_file.set_already_copied()
                 else:
-                    trace_verbose("         - Already copied.")
+                    trace_verbose("Already copied.", 2)
     else:
         # * Si existe un archivo en el directorio objetivo con el mismo nombre
         # * Notificaremos el suceso
-        trace_verbose("         - File '%s' already exists." % archive_target_file)
+        trace_verbose("File '%s' already exists." % archive_target_file, 2)
 
         target_unc_arch_file = UncArchFile(archive_target_file)
         
@@ -313,7 +310,7 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
                     os.remove(unc_arch_file.get_file())
             elif force_add2status and not unc_arch_file.is_already_copied():
                 unc_arch_file.set_already_copied()
-                trace_verbose("         - Added FORCED to copy_status.")
+                trace_verbose("Added FORCED to copy_status.", 2)
         else:
             print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (unc_arch_file.get_file(), archive_target_file))
             return False
@@ -330,15 +327,15 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
         return False
 
     for dirpath, dirs, files in os.walk(source_folder):
-        trace_verbose("     + source: %s" % dirpath)
+        trace_verbose("source: %s" % dirpath)
         
         for file in files:
-            trace_verbose("       * file: %s/%s" % (dirpath, file))
+            trace_verbose("file: %s/%s" % (dirpath, file), 1)
             
             unc_arch_file = UncArchFile(file=os.path.join(dirpath, file))
 
             if ignore_no_media_files and unc_arch_file.get_file_type() == UncArchFile.TYPE_OTHER:
-                trace_verbose("         - Is ignore because is not a media file.")
+                trace_verbose("Is ignore because is not a media file.", 2)
                 continue
 
             archive_target_folder = target_folder
@@ -349,12 +346,12 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
             archive_date = unc_arch_file.get_meta_datec()
 
             if archive_date:
-                trace_verbose("         - exif date: %s" % archive_date)
+                trace_verbose("exif date: %s" % archive_date, 2)
 
             if archive_date is None:
                 archive_date = unc_arch_file.get_filename_datec()
                 if archive_date:
-                    trace_verbose("         - filename date: %s" % archive_date)
+                    trace_verbose("filename date: %s" % archive_date, 2)
             
 
             if archive_date is None:
@@ -369,7 +366,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 archive_target_folder = os.path.join(archive_target_folder, unc_arch_file.get_file_type().lower())
 
                 if not archive_date is None:
-                    trace_verbose("         - `modified-date` file modification date: %s" % archive_date)
+                    trace_verbose("`modified-date` file modification date: %s" % archive_date, 2)
 
             if not archive_file(
                 unc_arch_file=unc_arch_file, 
@@ -379,7 +376,7 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
                 force_add2status=force_add2status,
                 dry_run=dry_run
             ):
-                trace_verbose("         - Can't archive file")
+                trace_verbose("Can't archive file", 2)
     
     if delete_empty_dir:
         rm_empty_dirs_recursive(source_folder=source_folder, dry_run=dry_run)
@@ -399,6 +396,10 @@ def rm_empty_dirs_recursive(source_folder, preserve=True, dry_run=True):
         except IOError:
             print("Error: IOError trying to delete '%s'" % source_folder)
 
-def trace_verbose(text):
+def trace_verbose(text, level=0, marker=True):
     if __debug__:
-        print(text)
+        print('%s%s%s' % (
+            ('  ' * level) + ' ' if marker else '', 
+            ('*', '+', '-')[level % 3] + ' ' if marker else '',
+            text
+        ))
