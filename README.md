@@ -2,6 +2,23 @@
 
 **A shity script for organize mesh media data on my family storage.**
 
+## Enlaces relacionados
+
+* **Software relacionado (en mi caso)**
+  * https://immich.app/
+  * https://www.resilio.com/sync/
+* **Librerias utilizadas**
+  * https://docs.python.org/3/library/configparser.html
+  * https://docs.python.org/es/3/library/getopt.html
+  * https://docs.python.org/es/3/library/shelve.html
+  * https://github.com/kkroening/ffmpeg-python
+  * https://github.com/ahupp/python-magic
+  * https://github.com/sbraz/pymediainfo
+  * https://github.com/carsales/pyheif
+  * https://github.com/sashsinha/simple-file-checksum/
+
+## Historia y mi experiencia
+
 Hace mucho tiempo la vida era mas sencilla. Con mi novia y mi *n900*, podias almacenar en 10 Gb en la nube (Dropbox) las fotos y videos de varios años... pero ahora, despues de que mis hijas alcanzaran la edad adolescentil, el *Datagedon* ha llegado a mi hogar. Con 4 Tb de disco en la lan de casa espero que al menos tenga para un par de años... Por que llegara el dia que llenen de fotos maquillandose y 14 perspectivas del mismo selfie el disco que he predispuesto de 4TB... entonces tendremos que hacer un poco mas de lo mismo, comprar dos discos mas grande (uno para backup) y almacenar tan apreciada libreria grafica.
 
 ## Contexto
@@ -16,20 +33,152 @@ Te recorre un directorio de forma recursiva localizando todos los archivos y org
 
 Si son archivos de medios visuales (videos e imagenes), los mete directamente en el directorio `archive_folder` en una carpeta con el año y otra hija con el mes del medio (priorizando exif y nombre de archivo), los archivos de audio, los mete en una carpeta `audio` dentro de `archive_folder` y el resto en una carpeta `other` dentro de la misma carpeta.
 
-Si son archivos de medios visuales que no consigue obtener la fecha del medio a partir del exif o del nombre del archivo, los mete en una carpeta `modified-date` y calcula la fecha en base a la fecha de modificacion del archivo. Esto lo hace asi porque esa fecha no solo es poco fiable, sino que ademas muchas veces esta mal (es la fecha del momento que copiaste el archivo en el disco cuasi siempre)
+Si son archivos de medios visuales que no consigue obtener la fecha del medio a partir del exif o del nombre del archivo, los mete en una carpeta `modified-date` y calcula la fecha en base a la fecha de modificacion del archivo. Esto lo hace asi porque esa fecha no solo es poco fiable, sino que ademas muchas veces esta mal (es la fecha del momento que copiaste por primera vez el archivo en el disco cuasi siempre, cosa que me ocurre al sincronizar archivos de movil al servidor con resilio)
 
 Con todo esto hay veces que puede encontrar archivos duplicados en fecha y nombre, utilizando md5, comprueba si son identicos y si son identicos los elimina del origen (ya lo tienes en `archive_folder`, me parecio conveniente que se comportara por defecto asi, aunque tienes la opcion de copiar archivos en vez de moverlos en cuyo caso no lo eliminara), y si en caso de colision, no coincide con el md5, los mantiene en el directorio `unclasified_folder` sin tocarlo y saca un error mencionando este hecho que tendras que resolver manualmente.
 
-## Enlaces relacionados
+### Estado de copia (`copy_status.shelve`)
 
-* https://docs.python.org/3/library/configparser.html
-* https://docs.python.org/es/3/library/getopt.html
-* https://github.com/kkroening/ffmpeg-python
-* https://github.com/ahupp/python-magic
-* https://github.com/sbraz/pymediainfo
-* https://github.com/carsales/pyheif
-* https://github.com/sashsinha/simple-file-checksum/
+<!-- TODO: Hacer configurable esta opcion, aunque si bien con eliminar el archivo ya no es necesaria, es posible que algunos comportamientos se puedan evitar haciendo mas rapido el proceso de copia -->
+<!-- TODO: Actualmente no se marca el estado al mover, pero esto, lo mismo, tiene que cambiar -->
+<!-- TODO: El problema del moz del futuro... `copy_status.shelve` muy grandes -->
 
+**Contexto:** Cuando estaba gestionando la copia de archivos de media generados con los moviles, me di cuenta que muchas veces te va a interesar borrar algunas de esas fotos de la galeria, el problema es que cuando lanzes de nuevo la sincronizacion, te va a volver a copiar estos archivos... ¿como podriamos evitar esto?. Pues lo primero que se me ocurrio fue utilizar un archivo temporal donde se almacene el estado de los archivos copiados (si ya se han copiado ya) y para ello buscando acerca de persistencia de objetos encontre [shelve](https://docs.python.org/es/3/library/shelve.html).
+
+Antes de copiar o eliminar archivos (en el caso de mover) comprueba si ya se copio el archivo y de ser asi no lo vuelve a copiar  inclusive si no existe en el destino (o eliminar inclusive si ya existe en el destino).
+
+Para hacer esto: **SOLO** cuando copia un archivo, se establece en un fichero (`copy_status.shelve`) que ha copiado este archivo añade un registro a la lista con una clave que es el checksum del archivo (`md5sum`) y el tamaño del mismo. La eleccion de esta estrategia para evitar posibles colisiones con los archivos es que en el escenario que tenemos (la media familiar) que ocurran 2 colisiones con estos dos es `'muy ' * 12` improbable.
+
+Los archivos donde se almacena el estado se crean por defecto en el directorio `/tmp` del sistema donde se ejecute el script, pero este es configurable por otra ruta que queramos usar en la variable de entorno `COPY_STATUS_DIR`. En la version de docker, este directorio cambia a `/copy_status` (utilizando la variable de entorno antes mencionada) para poder crear un volumen si queremos almacenar el estado para futuras copias. **Esto hay que tenermo muy presente porque por defecto, se crean archivos volatiles que desapareceran en algun momento.**
+
+Si por algun motivo, necesitamos volver a recrear el archivo de estado de la copia (), podemos establecer la opcion de configuracion `force_add2status=true`, que lo que hace basicamente es forzar aunque ya exista el archivo al realizar la tarea de archivado, guardar archivos anteriormente copiados el estado como copiado.
+
+### Colisiones
+
+**Funcionalidad aun en desarrollo**
+
+Para gestionar las colisiones (y entendamos colisiones como archivos con el mismo nombre pero diferente `checksum` que se copian en el mismo destino), se tratan como una version alternativa del original, por ello cuando va a copiar (o mover) un archivo que colisiona en el destino, lo que hace es cambiarle el nombre incluyendo el sufijo `(Collision <checksum>)`, para asi asegurarse que no colisione en un futuro con este.
+
+#### Ejemplo 1: Manteniendo el estado entre copias
+
+Plantemos el siguiente escenario con estos archivos:
+
+* 1 con checksum A: 1(A)
+* 1 con checksum B: 1(B)
+* 2 con checksum C: 2(C)
+* 3 con checksum A: 3(A)
+
+| Origen(MD5)  | Destino(MD5)  | 
+|--------------|---------------|
+| 1(A)         |               |
+| 1(B)         |               |
+| 2(C)         |               |
+| 3(A)         |               |
+
+Cuando hagamos la copia, como 1 coincide con el nombre, pero tiene distinto checksum, añadiendo el sufijo de `(Collision B)` para que se mantenga en el nuevo. Por otra parte 3(A), como ya ha sido copiado, aunque tenga el nombre distinto, no lo copia. Esto se quedara asi mientras que no cambie nada y siempre que mantengamos el estado de la copia.
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+| 1(A)         | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         |                   |
+
+Si borramos del origen el fichero 1(A), cuando va a copiar 1(B) detecta que se copio en 1(Collision B)(B) por lo que no copia y en destino sigue igual:
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+|              | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         |                   |
+
+Si añadimos a origen un nuevo archivo con el mismo nombre 1(D), detecta las otras copias y copia en 1(Collision D)(D)
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+|              | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         |                   |
+| 1(D)         | 1(Collision D)(D) |
+
+Si eliminamos del destino 1(A), al copiar un nuevo archivo con el mismo nombre 1(E), pero distinto checksum y, al estar libre el nombre del archivo, lo copia en este
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+|              | 1(E)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 1(D)         | 1(Collision D)(D) |
+| 3(A)         |                   |
+| 1(E)         |                   |
+
+#### Ejemplo 2: Sin mantener el estado entre copias
+
+**Resumen: Es resultado es identico al Ejemplo 1, pero al no guardar estado, el archivo `3(A)` se trata de forma distinta**
+
+Plantemos el siguiente escenario con estos archivos:
+
+* 1 con checksum A: 1(A)
+* 1 con checksum B: 1(B)
+* 2 con checksum C: 2(C)
+* 3 con checksum A: 3(A)
+
+| Origen(MD5) | Destino(MD5) | 
+|-------------|--------------|
+| 1(A)        |              |
+| 1(B)        |              |
+| 2(C)        |              |
+| 3(A)        |              |
+
+Cuando hagamos la primera copia, como 1 coincide con el nombre, pero tiene distinto checksum, añadiendo el sufijo de `(Collision B)` para que se mantenga en el nuevo. Por otra parte 3(A), como ya ha sido copiado en esta iteracion, aunque tenga el nombre distinto, no lo copia.
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+| 1(A)         | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         |                   |
+
+En una segunda copia, todo quedaria igual salvo que 3(A), como no coincide con el nombre y, aunque tenga el mismo checksum, copiara el archivo igualmente. Ya en sucesivas copias no cambiara nada.
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+| 1(A)         | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         | 3(A)              |
+
+Si borramos del origen el fichero 1(A), cuando va a copiar 1(B) detecta que se copio en 1(Collision B)(B) por lo que no copia y en destino sigue igual:
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+|              | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         | 3(A)              |
+
+Si añadimos a origen un nuevo archivo con el mismo nombre 1(D), detecta las otras copias y copia en 1(Collision D)(D)
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+|              | 1(A)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 3(A)         | 3(A)              |
+| 1(D)         | 1(Collision D)(D) |
+
+Si eliminamos del destino 1(A), al copiar un nuevo archivo con el mismo nombre 1(E), pero distinto checksum y, al estar libre el nombre del archivo, lo copia en este
+
+| Origen(MD5)  | Destino(MD5)      | 
+|--------------|-------------------|
+|              | 1(E)              |
+| 1(B)         | 1(Collision B)(B) |
+| 2(C)         | 2(C)              |
+| 1(D)         | 1(Collision D)(D) |
+| 3(A)         | 3(A)              |
+| 1(E)         |                   |
 
 ## Instalacion y ejecucion
 
@@ -162,6 +311,7 @@ Las opciones dentro de la seccion son:
 * `move_files` (valores true ó false), define si mueve los archivos desde `unclasified_folder` hasta la nueva estructura dentro de `archive_folder`, o si por el contrario, queremos copiar (**por defecto `true`, es decir, mueve los archivos**)
 * `delete_empty_dir` (valores true ó false), define si al acabar de recorrer toda la estructura de la carpeta `unclasified_folder` elimina los directorios vacios (**por defecto `true`, es decir, elimina los directorios vacios del origen**)
 * `ignore_no_media_files` (valores true ó false), ignora o no archivos considerados no media manteniendolos en el directorio de origen. (**por defecto `false`, es decir, que no los ignora y los mueve**)
+* `force_add2status` (valores true ó false), fuerza establecer el estado de la copia de archivos ya existentes en el destino (**por defecto `false`, es decir, que no fuerza el establecer el estado de archivos ya existentes**).
 * `resilio_backup` (valores true ó false). Esta opcion marcada como `true`, es un atajo a otras opciones (ignorando el resto de ellas), establece:
     * `move_files=false`
     * `delete_empty_dir=false`
@@ -283,16 +433,19 @@ Asi que...
 unclasified_folder=/DCIM
 archive_folder=/archive
 resilio_backup=true
+#force_add2status=true
 
 [Movies]
 unclasified_folder=/Movies
 archive_folder=/archive
 resilio_backup=true
+#force_add2status=true
 
 [Pictures]
 unclasified_folder=/Pictures
 archive_folder=/archive
 resilio_backup=true
+#force_add2status=true
 ```
 * `config.ios.ini`
 ```ini
@@ -300,6 +453,7 @@ resilio_backup=true
 unclasified_folder=/DCIM
 archive_folder=/archive
 resilio_backup=true
+#force_add2status=true
 ```
 
 **2. He definido un compose mapeando los volumenes con las distintas carpetas de usuarios:**
@@ -313,6 +467,7 @@ services:
     user: "1000"
     volumes:
       - ./config.android.ini:/opt/app/config.ini
+      - /opt/papa/copy_status:/copy_status
       - /opt/immich/papa:/archive
       - /opt/resilio/papa/DCIM:/DCIM
       - /opt/resilio/papa/Movies:/Movies
@@ -323,6 +478,7 @@ services:
     user: "1001"
     volumes:
       - ./config.android.ini:/opt/app/config.ini
+      - /opt/mama/copy_status:/copy_status
       - /opt/immich/mama:/archive
       - /opt/resilio/mama/DCIM:/DCIM
       - /opt/resilio/mama/Movies:/Movies
@@ -333,6 +489,7 @@ services:
     user: "1002"
     volumes:
       - ./config.android.ini:/opt/app/config.ini
+      - /opt/hija1/copy_status:/copy_status
       - /opt/immich/hija1:/archive
       - /opt/resilio/hija1/DCIM:/DCIM
       - /opt/resilio/hija1/Movies:/Movies
@@ -343,6 +500,7 @@ services:
     user: "1003"
     volumes:
       - ./config.ios.ini:/opt/app/config.ini
+      - /opt/hija2/copy_status:/copy_status
       - /opt/immich/hija2:/archive
       - /opt/resilio/hija2/DCIM:/DCIM
 ```
@@ -353,22 +511,14 @@ services:
 ```bash
 #!/bin/bash
 
-echo "* Ejecutando moz667..."
+echo "* Ejecutando papa..."
 time docker compose run --rm papa-movil
-echo "* Ejecutando angie..."
+echo "* Ejecutando mama..."
 time docker compose run --rm mama-movil
-echo "* Ejecutando angelica..."
+echo "* Ejecutando hija1..."
 time docker compose run --rm hija1-movil
-echo "* Ejecutando zoe..."
+echo "* Ejecutando hija2..."
 time docker compose run --rm hija2-movil
 ```
 
 Ahora ejecutando `archive-all.sh` tenemos todos los medios de los moviles familiares en cada una de sus librerias.
-
-## Mesh
-
-### Problema con archivos no deseados
-
-Hay un problema con las copias de resilio, copia muchos archivos que los usuarios no borran en el movil, por lo que si las borran de la galeria, en el momento que se vuelva a ejecutar el proceso, las vuelve a copiar, este es el problema que tenemos con whatsapp.... ¿podriamos guardar el estado de la copia para que si ocurre esto poder evitarlo?
-
-* https://docs.python.org/3/library/shelve.html
