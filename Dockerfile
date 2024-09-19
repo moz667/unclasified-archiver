@@ -1,4 +1,4 @@
-FROM python:3.12.5
+FROM python:3.12.2
 
 RUN apt-get update && \
     apt-get -y --no-install-recommends install ffmpeg libmediainfo0v5 openssl && \

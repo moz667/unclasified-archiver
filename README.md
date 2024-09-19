@@ -17,15 +17,15 @@
   * https://github.com/carsales/pyheif
   * https://github.com/sashsinha/simple-file-checksum/
 
-## Historia y mi experiencia
-
-Hace mucho tiempo la vida era mas sencilla. Con mi novia y mi *n900*, podias almacenar en 10 Gb en la nube (Dropbox) las fotos y videos de varios años... pero ahora, despues de que mis hijas alcanzaran la edad adolescentil, el *Datagedon* ha llegado a mi hogar. Con 4 Tb de disco en la lan de casa espero que al menos tenga para un par de años... Por que llegara el dia que llenen de fotos maquillandose y 14 perspectivas del mismo selfie el disco que he predispuesto de 4TB... entonces tendremos que hacer un poco mas de lo mismo, comprar dos discos mas grande (uno para backup) y almacenar tan apreciada libreria grafica.
-
 ## Contexto
 
-El problema nos surgio en un punto del año pasado y es que nos quedabamos sin espacio en google drive. Ya estaba pagando la cuota de 200 Gb de one drive y eso se llenaba en cuestion de semanas (en cuatro meses cada una de las cachorritas me generan 200 Gb). Durante algunos de los meses de principio de año, me descargue (google takeout) los archivos mas pesados de las nenas, pero aun asi eso se llenaba rapido (lo dicho, 200Gb en cuestion de semanas), así que me vi en la necesidad de o actualizar a 2 TB (100 €/año) o hacer algo para que pudieran tener sus medios. La forma que estaba utilizando para sincronizar fue utilizando synchthing (lo recomiendo encarecidamente, pero no tiene soporte para ios) y anteriormente sync (resilio sync, este lo deje de utilizar porque dejaba mi caca NAS demasiada petada la CPU).
+**Antes de nada... un poquito de historia:**
 
-Al principio, usando estos programas de syncronizacion en el storage familiar, volcaba todo el telefono de cada uno de los miembros familiares (que no fuera eso por lo que el Sync me dejaba frito el NAS... :P), pero al final entendi que esto es demasiado y que lo unico que me interesa almacenar son las carpetas de las fotos, cosa que empece ha hacer a posteriori... Mi forma de hacer el cambio de uno a otro movil (cuando se le rompia a alguien) era mover la carpeta de sync a otro lado y seguir como si nada, esto genero varias decenas de carpetas con miles de archivos y directorios cada uno de su padre y de su madre. Ya lo organizaran, pense, y como no lo hicieron, pues programe este script.
+> Hace mucho tiempo la vida era mas sencilla. Con mi novia y mi *n900*, podias almacenar en 10 Gb en la nube (Dropbox) las fotos y videos de varios años... pero ahora, despues de que mis hijas alcanzaran la edad adolescentil, el *Datagedon* ha llegado a mi hogar. Con 4 Tb de disco en la lan de casa espero que al menos tenga para un par de años... Por que llegara el dia que llenen de fotos maquillandose y 14 perspectivas del mismo selfie el disco que he predispuesto de 4TB... entonces tendremos que hacer un poco mas de lo mismo, comprar dos discos mas grande (uno para backup) y almacenar tan apreciada libreria grafica.
+
+El problema nos surgio en un punto del año pasado y es que nos quedabamos sin espacio en google drive. Ya estaba pagando la cuota de 200 Gb de one drive y eso se llenaba en cuestion de semanas (en cuatro meses cada una de las cachorritas me generan 200 Gb). Durante algunos de los meses de principio de año, me descargue (google takeout) los archivos mas pesados de las nenas y los borre del espacio de google, pero aun asi eso se llenaba rapido (lo dicho, 200Gb en cuestion de semanas), así que me vi en la necesidad de o actualizar a 2 TB (100 €/año) o hacer algo para que pudieran tener sus medios. La forma que estaba utilizando para sincronizar fue utilizando synchthing (lo recomiendo encarecidamente, pero no tiene soporte para ios) y anteriormente sync (resilio sync, este lo deje de utilizar porque dejaba mi caca NAS demasiada petada la CPU).
+
+Al principio, usando estos programas de syncronizacion en el storage familiar, volcaba todo el telefono de cada uno de los miembros familiares (que no fuera eso por lo que el Sync me dejaba frito el NAS... :P), pero al final entendi que esto es demasiado y que lo unico que me interesa almacenar son las carpetas de las fotos, cosa que empece ha hacer a posteriori... Mi forma de hacer el cambio de uno a otro movil (cuando se le rompia a alguien) era mover la carpeta de sync a otro lado y seguir como si nada, esto genero varias decenas de carpetas con miles de archivos y directorios cada uno de su padre y de su madre. Ya lo organizaran, pense... y como no lo hicieron, pues programe este script.
 
 ## Que hace
 
@@ -40,7 +40,6 @@ Con todo esto hay veces que puede encontrar archivos duplicados en fecha y nombr
 ### Estado de copia (`copy_status.shelve`)
 
 <!-- TODO: Hacer configurable esta opcion, aunque si bien con eliminar el archivo ya no es necesaria, es posible que algunos comportamientos se puedan evitar haciendo mas rapido el proceso de copia -->
-<!-- TODO: Actualmente no se marca el estado al mover, pero esto, lo mismo, tiene que cambiar -->
 <!-- TODO: El problema del moz del futuro... `copy_status.shelve` muy grandes -->
 
 **Contexto:** Cuando estaba gestionando la copia de archivos de media generados con los moviles, me di cuenta que muchas veces te va a interesar borrar algunas de esas fotos de la galeria, el problema es que cuando lanzes de nuevo la sincronizacion, te va a volver a copiar estos archivos... ¿como podriamos evitar esto?. Pues lo primero que se me ocurrio fue utilizar un archivo temporal donde se almacene el estado de los archivos copiados (si ya se han copiado ya) y para ello buscando acerca de persistencia de objetos encontre [shelve](https://docs.python.org/es/3/library/shelve.html).
@@ -55,9 +54,11 @@ Si por algun motivo, necesitamos volver a recrear el archivo de estado de la cop
 
 ### Colisiones
 
-**Funcionalidad aun en desarrollo**
-
 Para gestionar las colisiones (y entendamos colisiones como archivos con el mismo nombre pero diferente `checksum` que se copian en el mismo destino), se tratan como una version alternativa del original, por ello cuando va a copiar (o mover) un archivo que colisiona en el destino, lo que hace es cambiarle el nombre incluyendo el sufijo `(Collision <checksum>)`, para asi asegurarse que no colisione en un futuro con este.
+
+Al hacer la copia, el script, validara las dos posibilidades del archivo destino para elegir cual se eligio con anterioridad, es decir, copia o mueve siempre con el mismo nombre al destino.
+
+### Ejemplos
 
 #### Ejemplo 1: Manteniendo el estado entre copias
 
@@ -219,7 +220,7 @@ sudo apt install ffmpeg libmediainfo0v5 openssl
 2. Instalamos y configuramos [pyenv](https://github.com/pyenv/pyen)
 3. Creamos un entorno virtual para este script:
 ```bash
-pyenv virtualenv 3.12.5 unclasified-archiver
+pyenv virtualenv 3.12.2 unclasified-archiver
 echo "unclasified-archiver" > .python-version
 ```
 4. Instalamos las dependencias de python (`requirements.txt`):
@@ -229,11 +230,11 @@ pip install -r requirements.txt
 5. Creamos un archivo de configuracion, por ejemplo creamos el archivo [`config.ini`](#configuracion)
 6. Ejecutamos una prueba:
 ```bash
-python3 src/unclasified-archiver.py --c=config.ini --dry-run
+python src/unclasified-archiver.py --c=config.ini --dry-run
 ```
 7. Si lo vemos todo correcto (y no hay ninguna excepción) podemos ejecutar la version sin detalle de salida y ya modificando la estructura de archivos:
 ```bash
-python3 -O src/unclasified-archiver.py --c=config.ini
+python -O src/unclasified-archiver.py --c=config.ini
 ```
 
 ### Docker
