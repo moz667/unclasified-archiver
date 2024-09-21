@@ -1,4 +1,5 @@
 test-files
+.trash
 config*.ini
 .venv
 .python-version
