@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 create_img() {
     local index=$1
     local bg_color=$2
@@ -46,6 +48,11 @@ exif_dates=(\
 2024-02-01\ 08:00:00 \
 2024-01-01\ 08:00:00 \
 2023-12-01\ 08:00:00)
+
+# Limpiando archivos de test-files
+mkdir -p test-files
+echo " * Borrando archivos en test-files"
+rm -rf test-files
 
 # Archivos base (con diferentes exif dates y demas)
 current_dir=test-files/base
@@ -167,11 +174,18 @@ for i in {1..10}; do
     touch -t $modification_time "$current_dir/image-$i.jpg"
 done
 
-# Usuario con la carpeta origen FUERA de la carpeta destino
-mkdir -p test-files/user1/archive
-mkdir -p test-files/user1/unclasified
-copy_samples test-files/user1/unclasified
+for i in {1..10}; do
+    # Usuario con la carpeta origen FUERA de la carpeta destino
+    mkdir -p test-files/user1_$i/archive
+    mkdir -p test-files/user1_$i/unclasified
+    echo " * Copiando archivos a test-files/user1_$i/unclasified..."
+    copy_samples test-files/user1_$i/unclasified
 
-# Usuario con la carpeta origen DENTRO de la carpeta destino
-mkdir -p test-files/user2/archive/unclasified
-copy_samples test-files/user2/archive/unclasified
+    # Usuario con la carpeta origen DENTRO de la carpeta destino
+    mkdir -p test-files/user2_$i/archive/unclasified
+    echo " * Copiando archivos a test-files/user2_$i/archive/unclasified..."
+    copy_samples test-files/user2_$i/archive/unclasified
+done
+
+# Sacando el espacio usado
+du -sh test-files/
