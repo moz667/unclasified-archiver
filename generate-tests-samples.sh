@@ -174,6 +174,20 @@ for i in {1..10}; do
     touch -t $modification_time "$current_dir/image-$i.jpg"
 done
 
+# Archivos no-media
+current_dir=test-files/no-media
+mkdir -p $current_dir
+
+for i in {1..10}; do
+    modification_time=`echo ${exif_dates[$((i-1))]} | sed -e 's/[- :]//g' -e 's/\(.*\)\(..\)$/\1.\2/'`
+    output_file="$current_dir/text-$i.txt"
+
+    echo " * Generando $output_file..."
+    echo "$i" > $output_file
+    touch -t $modification_time $output_file
+done
+
+
 for i in {1..10}; do
     # Usuario con la carpeta origen FUERA de la carpeta destino
     mkdir -p test-files/user1_$i/archive
