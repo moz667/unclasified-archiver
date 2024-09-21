@@ -5,7 +5,7 @@ services:
     user: "1000"
     volumes:
       - ./src:/opt/app
-      - ./config.sample.ini:/opt/app/config.ini
-      - ./test-files/unclasified:/unclasified
-      - ./test-files/archive:/archive
-      - ./test-files/copy_status:/copy_status
+      - ${UA_CONFIG_INI:-./config.sample.ini}:/opt/app/config.ini
+      - ${UA_VOL_UNCLASIFIED:-./test-files/unclasified}:/unclasified
+      - ${UA_VOL_ARCHIVE:-./test-files/archive}:/archive
+      - ${UA_VOL_COPY_STATUS:-./test-files/copy_status}:/copy_status

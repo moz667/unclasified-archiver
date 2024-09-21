@@ -204,6 +204,15 @@ class UncArchFile:
     def get_clean_trashed_filename(self):
         return re.sub(self.TRASHED_FILE_PATTERN, "", self.filename)
 
+    def get_clean_filename(self):
+        return self.get_clean_trashed_filename() if self.is_trashed_file() else self.get_filename()
+
+    def get_alt_collision_filename(self):
+        prefix, extension = os.path.splitext(
+            self.get_clean_filename()
+        )
+        return "%s (Collision %s)%s" % (prefix, self.get_checksum(), extension)
+
     def format_str_as_date(self, str, format):
         global MAXIMAL_DATE, MINIMAL_DATE
 
@@ -249,6 +258,29 @@ class UncArchFile:
         d = shelve.open(os.path.join(COPY_STATUS_DIR, 'copy_status.shelve'), writeback=True)
         d[self.get_status_key()] = True
         d.close()
+    
+    def exists(self):
+        return os.path.exists(self.get_file())
+
+    def get_target(self, archive_target_folder: str) -> 'UncArchFile':
+        target_candidates = (
+            UncArchFile(os.path.join(
+                archive_target_folder, self.get_clean_filename()
+            )),
+            UncArchFile(os.path.join(
+                archive_target_folder, self.get_alt_collision_filename()
+            ))
+        )
+
+        for target_unc_arch_file in target_candidates:
+            if target_unc_arch_file.exists() and target_unc_arch_file.get_checksum() == self.get_checksum():
+                return target_unc_arch_file
+
+        for target_unc_arch_file in target_candidates:
+            if not target_unc_arch_file.exists():
+                return target_unc_arch_file
+
+        return target_candidates[0]
 
 
 def create_dir_if_not_exists(path, dry_run=False):
@@ -267,39 +299,20 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
 
     archive_target_folder = os.path.join(archive_target_folder, archive_date.strftime('%m'))
     create_dir_if_not_exists(archive_target_folder, dry_run=dry_run)
+    trace_verbose("Archive folder is '%s'." % archive_target_folder, 2)
 
-    archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_filename())
+    target_unc_arch_file = unc_arch_file.get_target(archive_target_folder)
+    if __debug__ and target_unc_arch_file.get_filename() != unc_arch_file.get_filename():
+        trace_verbose("Target filename is '%s'." % target_unc_arch_file.get_filename(), 2)
 
-    # Caso especial: archivos borrados en android, por ejemplo:
-    # .trashed-1703430355-IMG20231123161529_BURST000_COVER.jpg
-    if unc_arch_file.is_trashed_file():
-        archive_target_file = os.path.join(archive_target_folder, unc_arch_file.get_clean_trashed_filename())
-
-    # * Si no existe un archivo en el directorio objetivo
-    #    * Lo archivamos (moviendo o copiando segun el valor de move_files)
-    if not os.path.exists(archive_target_file):
-        if move_files:
-            if dry_run:
-                print('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
-            else:
-                shutil.move(unc_arch_file.get_file(), archive_target_file)
-        else:
-            if dry_run:
-                print(">>> if not unc_arch_file.is_already_copied():")
-                print('>>>     shutil.copy(%s, %s)' % (unc_arch_file.get_file(), archive_target_file))
-                print(">>>     unc_arch_file.set_already_copied()")
-            else:
-                if not unc_arch_file.is_already_copied():
-                    shutil.copy(unc_arch_file.get_file(), archive_target_file)
-                    unc_arch_file.set_already_copied()
-                else:
-                    trace_verbose("Already copied.", 2)
+    if not target_unc_arch_file.exists():
+        move_or_copy_file(
+            unc_arch_file=unc_arch_file, 
+            target_unc_arch_file=target_unc_arch_file, 
+            move_files=move_files, dry_run=dry_run
+        )
     else:
-        # * Si existe un archivo en el directorio objetivo con el mismo nombre
-        # * Notificaremos el suceso
-        trace_verbose("File '%s' already exists." % archive_target_file, 2)
-
-        target_unc_arch_file = UncArchFile(archive_target_file)
+        trace_verbose("File '%s' already exists." % target_unc_arch_file.get_file(), 2)
         
         # * Si el checksum de ambos archivos son identicos y si move_files=True borraremos el original
         if target_unc_arch_file.get_checksum() == unc_arch_file.get_checksum():
@@ -312,10 +325,30 @@ def archive_file(unc_arch_file: UncArchFile, archive_target_folder, archive_date
                 unc_arch_file.set_already_copied()
                 trace_verbose("Added FORCED to copy_status.", 2)
         else:
-            print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (unc_arch_file.get_file(), archive_target_file))
+            print("ERROR: Collision on archive_file '%s', file '%s' already exists with diferent checksum." % (
+                unc_arch_file.get_file(), target_unc_arch_file.get_file()
+            ))
             return False
 
     return True
+
+def move_or_copy_file(unc_arch_file: UncArchFile, target_unc_arch_file: UncArchFile, move_files=True, dry_run=False):
+    if move_files:
+        if dry_run:
+            print('>>> shutil.move(%s, %s)' % (unc_arch_file.get_file(), target_unc_arch_file.get_file()))
+        else:
+            shutil.move(unc_arch_file.get_file(), target_unc_arch_file.get_file())
+    else:
+        if dry_run:
+            print(">>> if not unc_arch_file.is_already_copied():")
+            print('>>>     shutil.copy(%s, %s)' % (unc_arch_file.get_file(), target_unc_arch_file.get_file()))
+            print(">>>     unc_arch_file.set_already_copied()")
+        else:
+            if not unc_arch_file.is_already_copied():
+                shutil.copy(unc_arch_file.get_file(), target_unc_arch_file.get_file())
+                unc_arch_file.set_already_copied()
+            else:
+                trace_verbose("Already copied.", 2)
 
 def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=False, ignore_no_media_files=False, force_add2status=False, dry_run=True):
     if not os.path.exists(source_folder):
