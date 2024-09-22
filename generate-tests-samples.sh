@@ -36,7 +36,7 @@ create_vid() {
 copy_samples() {
     local target_dir=$1
 
-    for source_folder in base base-diferent-checksum base-clone trashed-files no-exif-with-names no-exif-modified-file-date; do
+    for source_folder in 01-base 02-base-diferent-checksum 03-base-clone 04-trashed-files 05-no-exif-with-names 06-no-exif-modified-file-date 07-no-media; do
         rsync -qa test-files/$source_folder/ $target_dir/$source_folder/
     done
 }
@@ -59,58 +59,61 @@ echo " * Borrando archivos en test-files"
 rm -rf test-files
 
 # Archivos base (con diferentes exif dates y demas)
-current_dir=test-files/base
+current_dir=test-files/01-base
 mkdir -p $current_dir
 
 for i in {1..10}; do
     creation_time=${exif_dates[$((i-1))]}
     duration=$i
+    file_name_index=`printf "%02d" $i`
     
-    create_vid $duration "$creation_time" "$current_dir/video-$i.mp4"
+    create_vid $duration "$creation_time" "$current_dir/video-$file_name_index.mp4"
 
     img_creation_time=`echo ${exif_dates[$((i-1))]} | sed -e "s/-/:/g"`
     img_bg_arg=$((i-1))
 
-    create_img $i "#FFFFF$img_bg_arg" "$img_creation_time" "$current_dir/image-$i.jpg"
+    create_img $i "#FFFFF$img_bg_arg" "$img_creation_time" "$current_dir/image-$file_name_index.jpg"
 done
 
 # Archivos que colisionen con diferente checksum (con mismo nombre y mismo exif dates)
-current_dir=test-files/base-diferent-checksum
+current_dir=test-files/02-base-diferent-checksum
 mkdir -p $current_dir
 
 for i in {1..10}; do
     creation_time=${exif_dates[$((i-1))]}
     duration=$((10+i))
+    file_name_index=`printf "%02d" $i`
 
-    create_vid $duration "$creation_time" "$current_dir/video-$i.mp4"
+    create_vid $duration "$creation_time" "$current_dir/video-$file_name_index.mp4"
 
     img_creation_time=`echo ${exif_dates[$((i-1))]} | sed -e "s/-/:/g"`
     img_bg_arg=$((i-1))
 
-    create_img $i "#FF00F$img_bg_arg" "$img_creation_time" "$current_dir/image-$i.jpg"
+    create_img $i "#FF00F$img_bg_arg" "$img_creation_time" "$current_dir/image-$file_name_index.jpg"
 done
 
 # Archivos que colisionen con mismo checksum (con mismo nombre y mismo exif dates)
-rsync -qa test-files/base/ test-files/base-clone/
+rsync -qa test-files/01-base/ test-files/03-base-clone/
 
 # Archivos .trashed
-current_dir=test-files/trashed-files
+current_dir=test-files/04-trashed-files
 mkdir -p $current_dir
 
 for i in {1..10}; do
     creation_time=${exif_dates[$((i-1))]}
     duration=$((20+i))
+    file_name_index=`printf "%02d" $i`
 
-    create_vid $duration "$creation_time" "$current_dir/.trashed-00000000$i-video-$i.mp4"
+    create_vid $duration "$creation_time" "$current_dir/.trashed-00000000$file_name_index-video-$file_name_index.mp4"
 
     img_creation_time=`echo ${exif_dates[$((i-1))]} | sed -e "s/-/:/g"`
     img_bg_arg=$((i-1))
 
-    create_img $i "#00FFF$img_bg_arg" "$img_creation_time" "$current_dir/.trashed-00000000$i-image-$i.jpg"
+    create_img $i "#00FFF$img_bg_arg" "$img_creation_time" "$current_dir/.trashed-00000000$file_name_index-image-$file_name_index.jpg"
 done
 
 # Archivos con los distintos nombres con fechas soportados
-current_dir=test-files/no-exif-with-names
+current_dir=test-files/05-no-exif-with-names
 mkdir -p $current_dir
 
 #   format: IMG20231229232507
@@ -162,29 +165,31 @@ create_vid 37 "" "$current_dir/ALTER_2023-12-29-23-25-07.mp4"
 create_img 8 "#FFFF00" "" "$current_dir/ALTER_2023-12-29-23-25-07.jpg"
 
 # Archivos sin exif con fechas por momento de modificacion
-current_dir=test-files/no-exif-modified-file-date
+current_dir=test-files/06-no-exif-modified-file-date
 mkdir -p $current_dir
 
 for i in {1..10}; do
     modification_time=`echo ${exif_dates[$((i-1))]} | sed -e 's/[- :]//g' -e 's/\(.*\)\(..\)$/\1.\2/'`
     duration=$i
+    file_name_index=`printf "%02d" $i`
     
-    create_vid $duration "" "$current_dir/video-$i.mp4"
-    touch -t $modification_time "$current_dir/video-$i.mp4"
+    create_vid $duration "" "$current_dir/video-$file_name_index.mp4"
+    touch -t $modification_time "$current_dir/video-$file_name_index.mp4"
 
     img_bg_arg=$((i-1))
 
-    create_img $i "#FFFFF$img_bg_arg" "" "$current_dir/image-$i.jpg"
-    touch -t $modification_time "$current_dir/image-$i.jpg"
+    create_img $i "#FFFFF$img_bg_arg" "" "$current_dir/image-$file_name_index.jpg"
+    touch -t $modification_time "$current_dir/image-$file_name_index.jpg"
 done
 
 # Archivos no-media
-current_dir=test-files/no-media
+current_dir=test-files/07-no-media
 mkdir -p $current_dir
 
 for i in {1..10}; do
+    file_name_index=`printf "%02d" $i`
     modification_time=`echo ${exif_dates[$((i-1))]} | sed -e 's/[- :]//g' -e 's/\(.*\)\(..\)$/\1.\2/'`
-    output_file="$current_dir/text-$i.txt"
+    output_file="$current_dir/text-$file_name_index.txt"
 
     echo " * Generando $output_file..."
     echo "$i" > $output_file
@@ -192,7 +197,7 @@ for i in {1..10}; do
 done
 
 
-for i in {1..10}; do
+for i in {01..10}; do
     # Usuario con la carpeta origen FUERA de la carpeta destino
     mkdir -p test-files/user1_$i/archive
     mkdir -p test-files/user1_$i/unclasified
