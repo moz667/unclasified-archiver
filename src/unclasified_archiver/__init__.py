@@ -100,9 +100,9 @@ class UncArchFile:
                             break
             elif self.get_file_type() == self.TYPE_IMAGE:
                 str_datetime = None
-                f = open(self.file, 'rb')
-
-                tags = exifread.process_file(f)
+                with open(self.file, 'rb') as f:
+                    tags = exifread.process_file(f, stop_tag='EXIF DateTimeOriginal')
+                    f.close()
 
                 if 'EXIF DateTimeOriginal' in tags:
                     str_datetime = tags['EXIF DateTimeOriginal'].__str__()
