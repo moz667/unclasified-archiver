@@ -13,7 +13,11 @@ create_img() {
     # Generar la imagen con ImageMagick y añadir el EXIF
     convert -size "320x240" xc:"$bg_color" -gravity center \
         -pointsize "100" -fill "black" -annotate +0+0 "$index" \
-        -set exif:DateTimeOriginal "$creation_time" "$output_file"
+        "$output_file"
+    
+    if [ "$creation_time" != "" ]; then
+        exiftool -q -m -overwrite_original "-datetimeoriginal=$creation_time" "$output_file"
+    fi
 }
 
 create_vid() {
