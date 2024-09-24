@@ -33,14 +33,6 @@ create_vid() {
         $output_file > /dev/null 2>&1
 }
 
-copy_samples() {
-    local target_dir=$1
-
-    for source_folder in 01-base 02-base-diferent-checksum 03-base-clone 04-trashed-files 05-no-exif-with-names 06-no-exif-modified-file-date 07-no-media; do
-        rsync -qa test-files/$source_folder/ $target_dir/$source_folder/
-    done
-}
-
 exif_dates=(\
 2024-09-01\ 08:00:00 \
 2024-08-01\ 08:00:00 \
@@ -53,13 +45,18 @@ exif_dates=(\
 2024-01-01\ 08:00:00 \
 2023-12-01\ 08:00:00)
 
-# Limpiando archivos de test-files
-mkdir -p test-files
-echo " * Borrando archivos en test-files"
-rm -rf test-files
+DIR_SAMPLES=test-files/samples
+
+if [ -d $DIR_SAMPLES ]; then
+    echo "ERROR: Ya existe el directorio $DIR_SAMPLES"
+    exit 2
+fi
+
+# Creamos el directorio $DIR_SAMPLES
+mkdir -p $DIR_SAMPLES
 
 # Archivos base (con diferentes exif dates y demas)
-current_dir=test-files/01-base
+current_dir=$DIR_SAMPLES/01-base
 mkdir -p $current_dir
 
 for i in {1..10}; do
@@ -76,7 +73,7 @@ for i in {1..10}; do
 done
 
 # Archivos que colisionen con diferente checksum (con mismo nombre y mismo exif dates)
-current_dir=test-files/02-base-diferent-checksum
+current_dir=$DIR_SAMPLES/02-base-diferent-checksum
 mkdir -p $current_dir
 
 for i in {1..10}; do
@@ -93,10 +90,10 @@ for i in {1..10}; do
 done
 
 # Archivos que colisionen con mismo checksum (con mismo nombre y mismo exif dates)
-rsync -qa test-files/01-base/ test-files/03-base-clone/
+rsync -qa $DIR_SAMPLES/01-base/ $DIR_SAMPLES/03-base-clone/
 
 # Archivos .trashed
-current_dir=test-files/04-trashed-files
+current_dir=$DIR_SAMPLES/04-trashed-files
 mkdir -p $current_dir
 
 for i in {1..10}; do
@@ -113,7 +110,7 @@ for i in {1..10}; do
 done
 
 # Archivos con los distintos nombres con fechas soportados
-current_dir=test-files/05-no-exif-with-names
+current_dir=$DIR_SAMPLES/05-no-exif-with-names
 mkdir -p $current_dir
 
 #   format: IMG20231229232507
@@ -165,7 +162,7 @@ create_vid 37 "" "$current_dir/ALTER_2023-12-29-23-25-07.mp4"
 create_img 8 "#FFFF00" "" "$current_dir/ALTER_2023-12-29-23-25-07.jpg"
 
 # Archivos sin exif con fechas por momento de modificacion
-current_dir=test-files/06-no-exif-modified-file-date
+current_dir=$DIR_SAMPLES/06-no-exif-modified-file-date
 mkdir -p $current_dir
 
 for i in {1..10}; do
@@ -183,7 +180,7 @@ for i in {1..10}; do
 done
 
 # Archivos no-media
-current_dir=test-files/07-no-media
+current_dir=$DIR_SAMPLES/07-no-media
 mkdir -p $current_dir
 
 for i in {1..10}; do
@@ -196,19 +193,5 @@ for i in {1..10}; do
     touch -t $modification_time $output_file
 done
 
-
-for i in {01..10}; do
-    # Usuario con la carpeta origen FUERA de la carpeta destino
-    mkdir -p test-files/user1_$i/archive
-    mkdir -p test-files/user1_$i/unclasified
-    echo " * Copiando archivos a test-files/user1_$i/unclasified..."
-    copy_samples test-files/user1_$i/unclasified
-
-    # Usuario con la carpeta origen DENTRO de la carpeta destino
-    mkdir -p test-files/user2_$i/archive/unclasified
-    echo " * Copiando archivos a test-files/user2_$i/archive/unclasified..."
-    copy_samples test-files/user2_$i/archive/unclasified
-done
-
 # Sacando el espacio usado
-du -sh test-files/
+du -sh $DIR_SAMPLES/
