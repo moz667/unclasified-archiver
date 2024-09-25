@@ -1,5 +1,4 @@
 import os
-import sys
 
 from simple_file_checksum import get_checksum
 
@@ -109,6 +108,7 @@ class SampleFiles(metaclass=Singleton):
                 cur_fullpath_file = os.path.join(
                     self.root_dir, sample_dir, file
                 )
-                cur_dir_checksums[file] = get_checksum(cur_fullpath_file)
+                if os.path.exists(cur_fullpath_file):
+                    cur_dir_checksums[file] = get_checksum(cur_fullpath_file)
 
             self.checksums[sample_dir] = cur_dir_checksums
