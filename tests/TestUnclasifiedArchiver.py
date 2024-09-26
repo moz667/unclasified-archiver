@@ -10,28 +10,35 @@ import unclasified_archiver
 
 from tests.SampleFiles import SampleFiles
 
+setup_already_passed = False
+
 class TestUnclasifiedArchiver(unittest.TestCase):
     def setUp(self):
+        global setup_already_passed
+
         self.sample_files = SampleFiles()
-
-        # Check sample files
-        for sample_dir in self.sample_files.files:
-            for file in self.sample_files.files[sample_dir]:
-                cur_fullpath_file = os.path.join(
-                    self.sample_files.root_dir, sample_dir, file
-                )
-                if not os.path.exists(cur_fullpath_file):
-                    print("ERROR: No existen los archivos de ejemplo, ejecute 'generate-tests-samples.sh' para generarlos")
-                    sys.exit(2)
-
         self.root_tests_dir = os.path.join(
             "test-files", "tests"
         )
-        unclasified_archiver.create_dir_if_not_exists( self.root_tests_dir )
 
-        if os.listdir(self.root_tests_dir):
-            print("ERROR: El directorio '%s' no esta vacio." % self.root_tests_dir)
-            sys.exit(2)    
+        if not setup_already_passed:
+            # Check sample files
+            for sample_dir in self.sample_files.files:
+                for file in self.sample_files.files[sample_dir]:
+                    cur_fullpath_file = os.path.join(
+                        self.sample_files.root_dir, sample_dir, file
+                    )
+                    if not os.path.exists(cur_fullpath_file):
+                        print("ERROR: No existen los archivos de ejemplo, ejecute 'generate-tests-samples.sh' para generarlos")
+                        sys.exit(2)
+
+            unclasified_archiver.create_dir_if_not_exists( self.root_tests_dir )
+
+            if os.listdir(self.root_tests_dir):
+                print("ERROR: El directorio '%s' no esta vacio." % self.root_tests_dir)
+                sys.exit(2)
+            
+            setup_already_passed = True
         
 
     # TODO: Maybe delete all tests files?
@@ -112,6 +119,56 @@ class TestUnclasifiedArchiver(unittest.TestCase):
                 os.listdir(source_sample_dir), 
                 "ERROR: Archivos encontrados en '%s'" % source_sample_dir
             )
+
+    def test_archive_all_copy(self):
+        (source_folder, target_folder, status_folder) = self.create_testdirs(
+            "archive_all_copy"
+        )
+
+        unclasified_archiver.COPY_STATUS_DIR = status_folder
+
+        self.assertEqual(
+            unclasified_archiver.COPY_STATUS_DIR, status_folder
+        )
+
+        subprocess.call([
+            "rsync", "-qa", 
+            self.sample_files.root_dir + os.path.sep, 
+            source_folder + os.path.sep
+        ])
+
+        unclasified_archiver.archive_all(
+            source_folder=source_folder, 
+            target_folder=target_folder,
+            move_files=False,
+            delete_empty_dir=False,
+            ignore_no_media_files=False,
+            force_add2status=False,
+            dry_run=False
+        )
+
+        # Al copiar (move_files=False) generamos copy_status
+        self.assertTrue(os.listdir(status_folder))
+
+        # Chequear directorios en target_folder
+        self.check_create_target_dirs(target_folder)
+        
+        # Comprobar que en archive estan los archivos en los directorios y con 
+        # los nombres que se esperan
+        self.check_target_files(target_folder)
+
+        # Comprobar que en unclasified no estan los archivos pero si las carpetas
+        for sample_dir in self.sample_files.files:
+            source_sample_dir = os.path.join(source_folder, sample_dir)
+            self.assertTrue(
+                os.path.exists(source_sample_dir), 
+                "ERROR: Se ha borrado el directorio '%s'" % source_sample_dir
+            )
+            self.assertTrue(
+                os.listdir(source_sample_dir), 
+                "ERROR: Archivos NO encontrados en '%s'" % source_sample_dir
+            )
+
 
 
     def check_create_target_dirs(self, target_folder, check_no_media_files=True):
