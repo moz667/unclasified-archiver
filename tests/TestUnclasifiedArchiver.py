@@ -28,15 +28,19 @@ class TestUnclasifiedArchiver(unittest.TestCase):
             "test-files", "tests"
         )
         unclasified_archiver.create_dir_if_not_exists( self.root_tests_dir )
+
+        if os.listdir(self.root_tests_dir):
+            print("ERROR: El directorio '%s' no esta vacio." % self.root_tests_dir)
+            sys.exit(2)    
         
 
     # TODO: Maybe delete all tests files?
     # def tearDown(self):
     #     pass
 
-    def test_archive_all_default_args(self):
+    def create_testdirs(self, test_base_dirname):
         base_dir = os.path.join(
-            self.root_tests_dir, "archive_all"
+            self.root_tests_dir, test_base_dirname
         )
 
         source_folder = os.path.join(
@@ -52,15 +56,18 @@ class TestUnclasifiedArchiver(unittest.TestCase):
         )
 
         for test_dir in (base_dir, source_folder, target_folder, status_folder):
-            if os.path.exists(test_dir):
-                print("ERROR: '%s' directory already exists." % test_dir)
-                sys.exit(2)
-
             unclasified_archiver.create_dir_if_not_exists( test_dir )
 
             if not os.path.exists(test_dir):
                 print("ERROR: '%s' directory was not created." % test_dir)
                 sys.exit(2)
+        
+        return (source_folder, target_folder, status_folder)
+
+    def test_archive_all_default_args(self):
+        (source_folder, target_folder, status_folder) = self.create_testdirs(
+            "archive_all"
+        )
 
         unclasified_archiver.COPY_STATUS_DIR = status_folder
 
@@ -88,6 +95,26 @@ class TestUnclasifiedArchiver(unittest.TestCase):
         self.assertFalse(os.listdir(status_folder))
 
         # Chequear directorios en target_folder
+        self.check_create_target_dirs(target_folder)
+        
+        # Comprobar que en archive estan los archivos en los directorios y con 
+        # los nombres que se esperan
+        self.check_target_files(target_folder)
+
+        # Comprobar que en unclasified no estan los archivos pero si las carpetas
+        for sample_dir in self.sample_files.files:
+            source_sample_dir = os.path.join(source_folder, sample_dir)
+            self.assertTrue(
+                os.path.exists(source_sample_dir), 
+                "ERROR: Se ha borrado el directorio '%s'" % source_sample_dir
+            )
+            self.assertFalse(
+                os.listdir(source_sample_dir), 
+                "ERROR: Archivos encontrados en '%s'" % source_sample_dir
+            )
+
+
+    def check_create_target_dirs(self, target_folder, check_no_media_files=True):
         cur_target_modified_date = os.path.join(
             target_folder, 'modified-date'
         )
@@ -115,18 +142,19 @@ class TestUnclasifiedArchiver(unittest.TestCase):
                 )
 
             # Comprobar que se movieron los NO-MEDIA
-            cur_nomedia_file = os.path.join(
-                cur_target_modified_date, "other", 
-                cur_datetime.strftime('%Y'), cur_datetime.strftime('%m'),
-                "text-%s.txt" % f"{i:02}"
-            )
-            self.assertTrue(
-                os.path.exists(cur_nomedia_file),
-                "ERROR: No existe el archivo no-media '%s'" % cur_nomedia_file
-            )
+            if check_no_media_files:
+                cur_nomedia_file = os.path.join(
+                    cur_target_modified_date, "other", 
+                    cur_datetime.strftime('%Y'), cur_datetime.strftime('%m'),
+                    "text-%s.txt" % f"{i:02}"
+                )
+                self.assertTrue(
+                    os.path.exists(cur_nomedia_file),
+                    "ERROR: No existe el archivo no-media '%s'" % cur_nomedia_file
+                )
 
-            i += 1
-
+                i += 1
+        
         # Caso especial: 2013-12-29-23-25-07_photo.(jpg|mp4)
         cur_archive_dir = os.path.join(
             target_folder, '2013', '12'
@@ -135,9 +163,8 @@ class TestUnclasifiedArchiver(unittest.TestCase):
             os.path.exists(cur_archive_dir),
             "ERROR: No existe el directorio '%s'" % cur_archive_dir
         )
-
-        # Comprobar que en archive estan los archivos en los directorios y con 
-        # los nombres que se esperan
+    
+    def check_target_files(self, target_folder):
 
         # 1) Archivos base y colisiones
         # archive/year/month/(image|video)-[01...10].(jpg|mp4)
@@ -213,14 +240,3 @@ class TestUnclasifiedArchiver(unittest.TestCase):
                 "ERROR: No existe el archivo '%s'" % cur_file
             )
         
-        # Comprobar que en unclasified no estan los archivos pero si las carpetas
-        for sample_dir in self.sample_files.files:
-            source_sample_dir = os.path.join(source_folder, sample_dir)
-            self.assertTrue(
-                os.path.exists(source_sample_dir), 
-                "ERROR: Se ha borrado el directorio '%s'" % source_sample_dir
-            )
-            self.assertFalse(
-                os.listdir(source_sample_dir), 
-                "ERROR: Archivos encontrados en '%s'" % source_sample_dir
-            )
