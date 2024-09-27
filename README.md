@@ -523,3 +523,10 @@ time docker compose run --rm hija2-movil
 ```
 
 Ahora ejecutando `archive-all.sh` tenemos todos los medios de los moviles familiares en cada una de sus librerias.
+
+## Tests
+
+Para poder ejecutar los tests requiere haberse montado el entorno con [python de forma local](#python-local).
+
+1. Generar archjvos de prueba ejecutando `generate-tests-samples.sh`
+2. Lanzar los tests ejecutando `python -O -m unittest tests.TestUnclasifiedArchiver`

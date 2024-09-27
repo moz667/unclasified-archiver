@@ -362,6 +362,9 @@ def archive_all(source_folder, target_folder, move_files=True, delete_empty_dir=
     for dirpath, dirs, files in os.walk(source_folder):
         trace_verbose("source: %s" % dirpath)
         
+        if dirs: dirs.sort()
+        if files: files.sort()
+
         for file in files:
             trace_verbose("file: %s/%s" % (dirpath, file), 1)
             
