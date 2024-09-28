@@ -170,6 +170,54 @@ class TestUnclasifiedArchiver(unittest.TestCase):
             )
 
 
+    def test_archive_all_resilio_backup(self):
+        (source_folder, target_folder, status_folder) = self.create_testdirs(
+            "archive_all_resilio_backup"
+        )
+
+        unclasified_archiver.COPY_STATUS_DIR = status_folder
+
+        self.assertEqual(
+            unclasified_archiver.COPY_STATUS_DIR, status_folder
+        )
+
+        subprocess.call([
+            "rsync", "-qa", 
+            self.sample_files.root_dir + os.path.sep, 
+            source_folder + os.path.sep
+        ])
+
+        unclasified_archiver.archive_all(
+            source_folder=source_folder, 
+            target_folder=target_folder,
+            move_files=False,
+            delete_empty_dir=False,
+            ignore_no_media_files=True,
+            force_add2status=False,
+            dry_run=False
+        )
+
+        # Al copiar (move_files=False) generamos copy_status
+        self.assertTrue(os.listdir(status_folder))
+
+        # Chequear directorios en target_folder
+        self.check_create_target_dirs(target_folder, check_no_media_files=False)
+        
+        # Comprobar que en archive estan los archivos en los directorios y con 
+        # los nombres que se esperan
+        self.check_target_files(target_folder)
+
+        # Comprobar que en unclasified no estan los archivos pero si las carpetas
+        for sample_dir in self.sample_files.files:
+            source_sample_dir = os.path.join(source_folder, sample_dir)
+            self.assertTrue(
+                os.path.exists(source_sample_dir), 
+                "ERROR: Se ha borrado el directorio '%s'" % source_sample_dir
+            )
+            self.assertTrue(
+                os.listdir(source_sample_dir), 
+                "ERROR: Archivos NO encontrados en '%s'" % source_sample_dir
+            )
 
     def check_create_target_dirs(self, target_folder, check_no_media_files=True):
         cur_target_modified_date = os.path.join(
@@ -188,7 +236,7 @@ class TestUnclasifiedArchiver(unittest.TestCase):
                 cur_datetime.strftime('%Y'), cur_datetime.strftime('%m')
             )))
 
-            for file_type in ("other", "image", "video"):
+            for file_type in ("image", "video"):
                 cur_archive_dir = os.path.join(
                     cur_target_modified_date, file_type, 
                     cur_datetime.strftime('%Y'), cur_datetime.strftime('%m')
@@ -198,19 +246,25 @@ class TestUnclasifiedArchiver(unittest.TestCase):
                     "ERROR: No existe el directorio '%s'" % cur_archive_dir
                 )
 
-            # Comprobar que se movieron los NO-MEDIA
+            # Comprobar que se trataron o NO, los NO-MEDIA
+            cur_nomedia_file = os.path.join(
+                cur_target_modified_date, "other", 
+                cur_datetime.strftime('%Y'), cur_datetime.strftime('%m'),
+                "text-%s.txt" % f"{i:02}"
+            )
+
             if check_no_media_files:
-                cur_nomedia_file = os.path.join(
-                    cur_target_modified_date, "other", 
-                    cur_datetime.strftime('%Y'), cur_datetime.strftime('%m'),
-                    "text-%s.txt" % f"{i:02}"
-                )
                 self.assertTrue(
                     os.path.exists(cur_nomedia_file),
                     "ERROR: No existe el archivo no-media '%s'" % cur_nomedia_file
                 )
+            else:
+                self.assertFalse(
+                    os.path.exists(cur_nomedia_file),
+                    "ERROR: Existe el archivo no-media '%s'" % cur_nomedia_file
+                )
 
-                i += 1
+            i += 1
         
         # Caso especial: 2013-12-29-23-25-07_photo.(jpg|mp4)
         cur_archive_dir = os.path.join(

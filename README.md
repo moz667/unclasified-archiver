@@ -529,4 +529,4 @@ Ahora ejecutando `archive-all.sh` tenemos todos los medios de los moviles famili
 Para poder ejecutar los tests requiere haberse montado el entorno con [python de forma local](#python-local).
 
 1. Generar archjvos de prueba ejecutando `generate-tests-samples.sh`
-2. Lanzar los tests ejecutando `python -O -m unittest tests.TestUnclasifiedArchiver`
+2. Lanzar los tests ejecutando `python -O -m unittest tests.TestUnclasifiedArchiver` o si quieres hacerlo varias veces, borrando primero los archivos generados de otras `rm -rf test-files/tests/* && python -O -m unittest tests.TestUnclasifiedArchiver`
