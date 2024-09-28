@@ -10,35 +10,30 @@ import unclasified_archiver
 
 from tests.SampleFiles import SampleFiles
 
-setup_already_passed = False
 
 class TestUnclasifiedArchiver(unittest.TestCase):
-    def setUp(self):
-        global setup_already_passed
-
+    @classmethod
+    def setUpClass(self):
         self.sample_files = SampleFiles()
         self.root_tests_dir = os.path.join(
             "test-files", "tests"
         )
 
-        if not setup_already_passed:
-            # Check sample files
-            for sample_dir in self.sample_files.files:
-                for file in self.sample_files.files[sample_dir]:
-                    cur_fullpath_file = os.path.join(
-                        self.sample_files.root_dir, sample_dir, file
-                    )
-                    if not os.path.exists(cur_fullpath_file):
-                        print("ERROR: No existen los archivos de ejemplo, ejecute 'generate-tests-samples.sh' para generarlos")
-                        sys.exit(2)
+        # Check sample files
+        for sample_dir in self.sample_files.files:
+            for file in self.sample_files.files[sample_dir]:
+                cur_fullpath_file = os.path.join(
+                    self.sample_files.root_dir, sample_dir, file
+                )
+                if not os.path.exists(cur_fullpath_file):
+                    print("ERROR: No existen los archivos de ejemplo, ejecute 'generate-tests-samples.sh' para generarlos")
+                    sys.exit(2)
 
-            unclasified_archiver.create_dir_if_not_exists( self.root_tests_dir )
+        unclasified_archiver.create_dir_if_not_exists( self.root_tests_dir )
 
-            if os.listdir(self.root_tests_dir):
-                print("ERROR: El directorio '%s' no esta vacio." % self.root_tests_dir)
-                sys.exit(2)
-            
-            setup_already_passed = True
+        if os.listdir(self.root_tests_dir):
+            print("ERROR: El directorio '%s' no esta vacio." % self.root_tests_dir)
+            sys.exit(2)
         
 
     # TODO: Maybe delete all tests files?
@@ -350,4 +345,6 @@ class TestUnclasifiedArchiver(unittest.TestCase):
                 os.path.exists(cur_file),
                 "ERROR: No existe el archivo '%s'" % cur_file
             )
-        
+
+if __name__ == '__main__':
+    unittest.main()
