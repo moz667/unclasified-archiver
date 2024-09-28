@@ -8,7 +8,7 @@ from simple_file_checksum import get_checksum
 
 import unclasified_archiver
 
-from tests.SampleFiles import SampleFiles
+from SampleFiles import SampleFiles
 
 
 class TestUnclasifiedArchiver(unittest.TestCase):

@@ -530,3 +530,9 @@ Para poder ejecutar los tests requiere haberse montado el entorno con [python de
 
 1. Generar archjvos de prueba ejecutando `generate-tests-samples.sh`
 2. Lanzar los tests ejecutando `python -O -m unittest tests.TestUnclasifiedArchiver` o si quieres hacerlo varias veces, borrando primero los archivos generados de otras `rm -rf test-files/tests/* && python -O -m unittest tests.TestUnclasifiedArchiver`
+
+Por otra parte si queremos ejecutar solo un metodo de la clase de test, hay que hacerlo ejecutando directamente el archivo de test y pasandole como argumento el nombre de la clase y el metodo, como por ejemplo para el metodo `test_archive_all_resilio_backup` de la clase `TestUnclasifiedArchiver`:
+
+```bash
+python -O tests/TestUnclasifiedArchiver.py TestUnclasifiedArchiver.test_archive_all_resilio_backup
+```
